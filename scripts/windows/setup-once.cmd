@@ -11,6 +11,10 @@ if exist "..\playwright-base-framework\package.json" (
   if errorlevel 1 goto failed
   call npm.cmd --prefix ..\playwright-base-framework run pack:local
   if errorlevel 1 goto failed
+
+  echo.
+  echo Refreshing app template lockfile for the locally packed framework...
+  if exist "package-lock.json" del /f /q "package-lock.json"
 )
 
 echo.

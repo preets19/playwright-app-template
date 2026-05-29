@@ -15,6 +15,21 @@ Common causes:
 
 If `package.json` was changed, run `npm install` again.
 
+## NPM Says Framework Tarball Is Corrupted Or EINTEGRITY
+
+This can happen when `package-lock.json` was created with a different locally packed framework tarball than the one on this machine.
+
+Try this from the template repo:
+
+```powershell
+Remove-Item package-lock.json -Force -ErrorAction SilentlyContinue
+Remove-Item node_modules -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item .npm-cache -Recurse -Force -ErrorAction SilentlyContinue
+.\Setup Automation.cmd
+```
+
+The setup script refreshes the lockfile after rebuilding the local framework package.
+
 ## Dashboard Does Not Open
 
 Try these steps:
