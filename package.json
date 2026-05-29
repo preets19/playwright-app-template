@@ -1,0 +1,23 @@
+{
+  "name": "playwright-app-template",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "framework:build": "npm --prefix ../playwright-base-framework run pack:local",
+    "dashboard": "node tools/test-dashboard/server.mjs",
+    "test": "playwright test -c playwright.config.ts",
+    "test:ui": "playwright test -c playwright.config.ts --ui",
+    "typecheck": "tsc --noEmit",
+    "clean": "node ./scripts/clean.mjs",
+    "maintenance:check": "npm run typecheck && npm run security:audit",
+    "security:audit": "npm audit --audit-level=moderate",
+    "validate": "npm run typecheck && npm test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.60.0",
+    "@types/node": "22.7.5",
+    "@your-org/playwright-base-framework": "file:../playwright-base-framework/your-org-playwright-base-framework-1.0.0.tgz",
+    "typescript": "^5.9.3"
+  }
+}

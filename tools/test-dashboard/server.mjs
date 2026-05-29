@@ -1,0 +1,715 @@
+import { createServer } from 'node:http';
+import { homedir } from 'node:os';
+import { spawn } from 'node:child_process';
+import { randomBytes, timingSafeEqual } from 'node:crypto';
+import { createReadStream, existsSync } from 'node:fs';
+import { mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { basename, extname, join, normalize, relative, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const hostRootDir = resolve(fileURLToPath(new URL('../..', import.meta.url)));
+const dashboardDir = resolve(fileURLToPath(new URL('.', import.meta.url)));
+const publicDir = join(dashboardDir, 'public');
+const workspaceRoot = resolve(process.env.AUTOMATION_WORKSPACE_ROOT ?? resolve(homedir(), 'Source', 'Repo'));
+const port = Number(process.env.DASHBOARD_PORT ?? 4310);
+const host = process.env.DASHBOARD_HOST ?? '127.0.0.1';
+const sessionToken = randomBytes(32).toString('hex');
+const sessionCookie = `automation_dashboard_session=${sessionToken}; HttpOnly; SameSite=Strict; Path=/`;
+const heartbeatTimeoutMs = Number(process.env.DASHBOARD_HEARTBEAT_TIMEOUT_MS ?? 120_000);
+let lastDashboardHeartbeat = 0;
+
+const contentTypes = new Map([
+  ['.html', 'text/html; charset=utf-8'],
+  ['.css', 'text/css; charset=utf-8'],
+  ['.js', 'text/javascript; charset=utf-8'],
+  ['.json', 'application/json; charset=utf-8'],
+  ['.png', 'image/png'],
+  ['.webm', 'video/webm'],
+  ['.zip', 'application/zip']
+]);
+
+const commands = {
+  validate: {
+    label: 'Full Validation',
+    command: 'npm.cmd',
+    args: ['run', 'validate'],
+    useLocalTemp: true
+  },
+  typecheck: {
+    label: 'App TypeScript Check',
+    command: 'npm.cmd',
+    args: ['run', 'typecheck']
+  },
+  build: {
+    label: 'Build Framework Dependency',
+    command: 'npm.cmd',
+    args: ['run', 'framework:build']
+  },
+  testAll: {
+    label: 'Run Tests',
+    command: 'npm.cmd',
+    args: ['test'],
+    useLocalTemp: true
+  },
+  testUi: {
+    label: 'Open Playwright Test Runner UI',
+    command: 'npm.cmd',
+    args: ['run', 'test:ui'],
+    useLocalTemp: true,
+    detached: true
+  },
+  recorder: {
+    label: 'Open Playwright Recorder UI',
+    command: 'npx.cmd',
+    args: ['playwright', 'codegen', '--target', 'playwright-test'],
+    useLocalTemp: true,
+    detached: true
+  },
+  outdated: {
+    label: 'Check Dependency Updates',
+    command: 'npm.cmd',
+    args: ['outdated'],
+    allowNonZero: true
+  },
+  audit: {
+    label: 'Security Audit',
+    command: 'npm.cmd',
+    args: ['audit', '--audit-level=moderate'],
+    allowNonZero: true
+  },
+  listTests: {
+    label: 'Discover Tests',
+    command: 'npx.cmd',
+    args: ['playwright', 'test', '-c', 'playwright.config.ts', '--list'],
+    useLocalTemp: true
+  },
+  installBrowsers: {
+    label: 'Install Playwright Browsers',
+    command: 'npx.cmd',
+    args: ['playwright', 'install'],
+    confirm: true
+  }
+};
+
+const cleanupTargets = ['dist', 'playwright-report', 'test-results'];
+
+const server = createServer(async (request, response) => {
+  try {
+    const url = new URL(request.url ?? '/', `http://${request.headers.host}`);
+
+    if ((url.pathname.startsWith('/api/') || url.pathname.startsWith('/reports/')) && !hasValidSession(request)) {
+      await sendJson(response, { ok: false, error: 'Dashboard session is not authorized.' }, 403);
+      return;
+    }
+
+    if (url.pathname === '/api/repos') {
+      await sendJson(response, await listAppRepos());
+      return;
+    }
+
+    if (url.pathname === '/api/heartbeat' && request.method === 'POST') {
+      lastDashboardHeartbeat = Date.now();
+      await sendJson(response, { ok: true });
+      return;
+    }
+
+    if (url.pathname === '/api/status') {
+      const repoDir = await getSelectedRepoDir(url);
+      await sendJson(response, await getStatus(repoDir));
+      return;
+    }
+
+    if (url.pathname === '/api/settings' && request.method === 'GET') {
+      const repoDir = await getSelectedRepoDir(url);
+      await sendJson(response, await readSettings(repoDir));
+      return;
+    }
+
+    if (url.pathname === '/api/settings' && request.method === 'POST') {
+      const body = await readRequestJson(request);
+      const repoDir = await getSelectedRepoDir(url, body);
+      delete body.repoDir;
+      await writeSettings(repoDir, body);
+      await sendJson(response, { ok: true });
+      return;
+    }
+
+    if (url.pathname === '/api/run' && request.method === 'POST') {
+      const body = await readRequestJson(request);
+      const repoDir = await getSelectedRepoDir(url, body);
+      await sendJson(response, await runAllowedCommand(repoDir, body.id, body));
+      return;
+    }
+
+    if (url.pathname === '/api/cleanup' && request.method === 'POST') {
+      const body = await readRequestJson(request);
+      const repoDir = await getSelectedRepoDir(url, body);
+      await cleanupGeneratedFiles(repoDir);
+      await sendJson(response, { ok: true, message: 'Generated files cleaned.' });
+      return;
+    }
+
+    if (url.pathname === '/api/stop-automation' && request.method === 'POST') {
+      await sendJson(response, { ok: true, message: 'Automation is stopping. This dashboard will disconnect.' });
+      setTimeout(stopAutomationProcesses, 250);
+      return;
+    }
+
+    if (url.pathname === '/api/artifacts') {
+      const repoDir = await getSelectedRepoDir(url);
+      await sendJson(response, await listArtifacts(repoDir));
+      return;
+    }
+
+    if (url.pathname.startsWith('/reports/')) {
+      await serveReport(url.pathname, response);
+      return;
+    }
+
+    await serveStatic(url.pathname, response);
+  } catch (error) {
+    await sendJson(response, { ok: false, error: error instanceof Error ? error.message : String(error) }, 500);
+  }
+});
+
+server.on('error', (error) => {
+  if (error?.code === 'EADDRINUSE') {
+    console.log(`Test dashboard is already running or another process is using http://${host}:${port}`);
+    console.log(`Open http://${host}:${port} in your browser, or run Stop Automation.cmd and try again.`);
+    process.exit(0);
+  }
+
+  console.error(error);
+  process.exit(1);
+});
+
+server.listen(port, host, () => {
+  recordAutomationPid(hostRootDir, process.pid, 'dashboard-server');
+  console.log(`Test dashboard running at http://${host}:${port}`);
+});
+
+setInterval(() => {
+  if (!lastDashboardHeartbeat) {
+    return;
+  }
+
+  if (Date.now() - lastDashboardHeartbeat > heartbeatTimeoutMs) {
+    console.log('Dashboard browser heartbeat stopped. Stopping automation processes.');
+    stopAutomationProcesses();
+  }
+}, 30_000).unref();
+
+function localTempEnv(repoDir) {
+  const temp = join(repoDir, '.tmp');
+  return { TEMP: temp, TMP: temp };
+}
+
+async function listAppRepos() {
+  if (!existsSync(workspaceRoot)) {
+    return {
+      workspaceRoot,
+      defaultRepoDir: '',
+      repos: []
+    };
+  }
+
+  const entries = await readdir(workspaceRoot, { withFileTypes: true });
+  const repos = [];
+
+  for (const entry of entries) {
+    if (!entry.isDirectory()) {
+      continue;
+    }
+
+    const repoDir = join(workspaceRoot, entry.name);
+    if (await isAppAutomationRepo(repoDir)) {
+      repos.push({
+        name: entry.name,
+        path: repoDir
+      });
+    }
+  }
+
+  repos.sort((a, b) => a.name.localeCompare(b.name));
+
+  return {
+    workspaceRoot,
+    defaultRepoDir: repos.find((repo) => repo.path === hostRootDir)?.path ?? repos[0]?.path ?? '',
+    repos
+  };
+}
+
+async function getSelectedRepoDir(url, body = {}) {
+  const requested = body.repoDir ?? url.searchParams.get('repoDir') ?? hostRootDir;
+  const repoDir = resolve(String(requested));
+  const relativePath = relative(workspaceRoot, repoDir);
+
+  if (relativePath.startsWith('..') || relativePath === '' || resolve(workspaceRoot, relativePath) !== repoDir) {
+    throw new Error('Selected repo must be under the local Source\\Repo workspace.');
+  }
+
+  if (!(await isAppAutomationRepo(repoDir))) {
+    throw new Error('Selected folder is not a valid app automation repo.');
+  }
+
+  return repoDir;
+}
+
+async function isAppAutomationRepo(repoDir) {
+  const packagePath = join(repoDir, 'package.json');
+  const requiredFiles = [
+    packagePath,
+    join(repoDir, 'playwright.config.ts'),
+    join(repoDir, 'appsettings.json')
+  ];
+
+  if (!requiredFiles.every((file) => existsSync(file))) {
+    return false;
+  }
+
+  try {
+    const packageJson = JSON.parse(await readFile(packagePath, 'utf-8'));
+    const dependencies = {
+      ...(packageJson.dependencies ?? {}),
+      ...(packageJson.devDependencies ?? {})
+    };
+    return Object.hasOwn(dependencies, '@your-org/playwright-base-framework');
+  } catch {
+    return false;
+  }
+}
+
+async function getStatus(repoDir) {
+  const [nodeVersion, npmVersion, playwrightVersion] = await Promise.all([
+    runProcess(repoDir, 'node', ['--version']),
+    runProcess(repoDir, 'npm.cmd', ['--version']),
+    runProcess(repoDir, 'npx.cmd', ['playwright', '--version'])
+  ]);
+
+  const settings = await readSettings(repoDir);
+  return {
+    rootDir: repoDir,
+    repoName: basename(repoDir),
+    workspaceRoot,
+    node: nodeVersion.stdout.trim(),
+    npm: npmVersion.stdout.trim(),
+    playwright: playwrightVersion.stdout.trim(),
+    appBaseUrl: settings.application?.baseUrl ?? '',
+    apiBaseUrl: settings.api?.baseUrl ?? '',
+    browsers: getConfiguredBrowsers(settings),
+    headless: settings.browser?.headless ?? true,
+    slowMo: settings.browser?.slowMo ?? 0,
+    hasNodeModules: existsSync(join(repoDir, 'node_modules')),
+    hasReport: existsSync(join(repoDir, 'playwright-report', 'index.html')),
+    reportUrl: getReportUrl(repoDir),
+    updatedAt: new Date().toISOString()
+  };
+}
+
+function getConfiguredBrowsers(settings) {
+  const configured = settings.browser?.browsers;
+  if (Array.isArray(configured) && configured.length) {
+    return configured;
+  }
+
+  return [settings.browser?.name ?? 'chromium'];
+}
+
+function getReportUrl(repoDir) {
+  return `/reports/${encodeURIComponent(basename(repoDir))}/playwright/index.html`;
+}
+
+async function readSettings(repoDir) {
+  const path = join(repoDir, 'appsettings.json');
+  return JSON.parse(await readFile(path, 'utf-8'));
+}
+
+async function writeSettings(repoDir, settings) {
+  const path = join(repoDir, 'appsettings.json');
+  await writeFile(path, `${JSON.stringify(settings, null, 2)}\n`, 'utf-8');
+}
+
+async function runAllowedCommand(repoDir, id, options = {}) {
+  const definition = commands[id];
+  if (!definition) {
+    throw new Error(`Unknown command: ${id}`);
+  }
+
+  if (definition.confirm && options.confirm !== true) {
+    throw new Error(`${definition.label} requires confirmation.`);
+  }
+
+  return runProcess(repoDir, definition.command, definition.args, {
+    env: definition.useLocalTemp ? localTempEnv(repoDir) : undefined,
+    allowNonZero: definition.allowNonZero,
+    detached: definition.detached
+  });
+}
+
+async function cleanupGeneratedFiles(repoDir) {
+  for (const target of cleanupTargets) {
+    await rm(join(repoDir, target), { recursive: true, force: true });
+  }
+}
+
+function hasValidSession(request) {
+  const cookieHeader = request.headers.cookie ?? '';
+  const cookieValue = cookieHeader
+    .split(';')
+    .map((part) => part.trim())
+    .find((part) => part.startsWith('automation_dashboard_session='))
+    ?.split('=')
+    .slice(1)
+    .join('=');
+
+  if (!cookieValue) {
+    return false;
+  }
+
+  const expected = Buffer.from(sessionToken);
+  const actual = Buffer.from(cookieValue);
+  return expected.length === actual.length && timingSafeEqual(expected, actual);
+}
+
+function stopAutomationProcesses() {
+  stopTrackedProcesses();
+  setTimeout(() => process.exit(0), 500);
+}
+
+function stopTrackedProcesses() {
+  const automationPidFile = join(hostRootDir, '.tmp', 'automation-pids.json');
+  if (!existsSync(automationPidFile)) {
+    return;
+  }
+
+  readFile(automationPidFile, 'utf-8')
+    .then((content) => {
+      const entries = JSON.parse(content);
+      if (!Array.isArray(entries)) {
+        return;
+      }
+
+      for (const entry of entries) {
+        const pid = Number(entry.pid);
+        if (Number.isInteger(pid) && pid > 0 && pid !== process.pid) {
+          spawn('taskkill.exe', ['/PID', String(pid), '/T', '/F'], {
+            windowsHide: true,
+            stdio: 'ignore'
+          });
+        }
+      }
+    })
+    .catch(() => {
+      // Best-effort shutdown only.
+    });
+}
+
+async function listArtifacts(repoDir) {
+  const roots = ['playwright-report', 'test-results'];
+  const artifacts = [];
+
+  for (const artifactRoot of roots) {
+    const absoluteRoot = join(repoDir, artifactRoot);
+    if (!existsSync(absoluteRoot)) {
+      continue;
+    }
+
+    const files = await walk(absoluteRoot);
+    artifacts.push(
+      ...files.map((file) => ({
+        file: normalize(relative(repoDir, file)).replaceAll('\\', '/'),
+        name: normalize(relative(absoluteRoot, file)).replaceAll('\\', '/')
+      }))
+    );
+  }
+
+  return artifacts;
+}
+
+function runProcess(repoDir, command, args, options = {}) {
+  if (options.detached === true && process.platform === 'win32') {
+    return runWindowsBackgroundProcess(repoDir, command, args, options);
+  }
+
+  return new Promise((resolveProcess) => {
+    const isDetached = options.detached === true;
+    const processCommand = process.platform === 'win32' ? process.env.ComSpec ?? 'cmd.exe' : command;
+    const processArgs = process.platform === 'win32'
+      ? ['/d', '/s', '/c', toWindowsCommandLine(command, args)]
+      : args;
+
+    const child = spawn(processCommand, processArgs, {
+      cwd: repoDir,
+      env: { ...process.env, ...(options.env ?? {}) },
+      shell: false,
+      windowsHide: true,
+      detached: isDetached,
+      stdio: isDetached ? 'ignore' : 'pipe'
+    });
+
+    let stdout = '';
+    let stderr = '';
+
+    if (!isDetached) {
+      child.stdout?.on('data', (data) => {
+        stdout += data.toString();
+      });
+      child.stderr?.on('data', (data) => {
+        stderr += data.toString();
+      });
+    }
+
+    child.on('error', (error) => {
+      resolveProcess({
+        ok: false,
+        exitCode: -1,
+        command: `${command} ${args.join(' ')}`,
+        stdout,
+        stderr: `${stderr}${error.message}`
+      });
+    });
+
+    child.on('close', (exitCode) => {
+      const ok = exitCode === 0 || options.allowNonZero === true || isDetached;
+      resolveProcess({
+        ok,
+        exitCode,
+        command: `${command} ${args.join(' ')}`,
+        stdout,
+        stderr
+      });
+    });
+
+    if (isDetached) {
+      recordAutomationPid(repoDir, child.pid, `${command} ${args.join(' ')}`);
+      child.unref();
+      resolveProcess({
+        ok: true,
+        exitCode: 0,
+        command: `${command} ${args.join(' ')}`,
+        stdout: 'Started in the background. You can close the Playwright UI or Recorder window when finished, or use Stop Automation.cmd.',
+        stderr: ''
+      });
+    }
+  });
+}
+
+function runWindowsBackgroundProcess(repoDir, command, args, options = {}) {
+  return new Promise((resolveProcess) => {
+    const envAssignments = Object.entries(options.env ?? {})
+      .map(([name, value]) => `$env:${name}=${toPowerShellString(value)}`)
+      .join('; ');
+    const argumentList = args.map(toPowerShellString).join(', ');
+    const script = [
+      envAssignments,
+      `$process = Start-Process -FilePath ${toPowerShellString(command)} -ArgumentList @(${argumentList}) -WorkingDirectory ${toPowerShellString(repoDir)} -WindowStyle Hidden -PassThru`,
+      '$process.Id'
+    ].filter(Boolean).join('; ');
+
+    const child = spawn('powershell.exe', [
+      '-NoProfile',
+      '-ExecutionPolicy',
+      'Bypass',
+      '-Command',
+      script
+    ], {
+      cwd: repoDir,
+      env: { ...process.env, ...(options.env ?? {}) },
+      shell: false,
+      windowsHide: true,
+      stdio: 'pipe'
+    });
+
+    let stdout = '';
+    let stderr = '';
+
+    child.stdout?.on('data', (data) => {
+      stdout += data.toString();
+    });
+    child.stderr?.on('data', (data) => {
+      stderr += data.toString();
+    });
+
+    child.on('error', (error) => {
+      resolveProcess({
+        ok: false,
+        exitCode: -1,
+        command: `${command} ${args.join(' ')}`,
+        stdout,
+        stderr: `${stderr}${error.message}`
+      });
+    });
+
+    child.on('close', (exitCode) => {
+      const pid = Number(stdout.trim().split(/\s+/).at(-1));
+      if (exitCode === 0 && Number.isInteger(pid) && pid > 0) {
+        recordAutomationPid(repoDir, pid, `${command} ${args.join(' ')}`);
+        resolveProcess({
+          ok: true,
+          exitCode,
+          command: `${command} ${args.join(' ')}`,
+          stdout: 'Started in the background. You can close the Playwright UI or Recorder window when finished, or use Stop Automation.cmd.',
+          stderr: ''
+        });
+        return;
+      }
+
+      resolveProcess({
+        ok: false,
+        exitCode,
+        command: `${command} ${args.join(' ')}`,
+        stdout,
+        stderr
+      });
+    });
+  });
+}
+
+async function recordAutomationPid(repoDir, pid, command) {
+  if (!pid) {
+    return;
+  }
+
+  const automationPidFile = join(hostRootDir, '.tmp', 'automation-pids.json');
+
+  try {
+    await mkdir(join(hostRootDir, '.tmp'), { recursive: true });
+    let entries = [];
+    if (existsSync(automationPidFile)) {
+      entries = JSON.parse(await readFile(automationPidFile, 'utf-8'));
+      if (!Array.isArray(entries)) {
+        entries = [];
+      }
+    }
+
+    entries.push({
+      pid,
+      repoDir,
+      command,
+      startedAt: new Date().toISOString()
+    });
+
+    await writeFile(automationPidFile, `${JSON.stringify(entries, null, 2)}\n`, 'utf-8');
+  } catch (error) {
+    console.warn(`Unable to record automation PID: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
+function toWindowsCommandLine(command, args) {
+  return [command, ...args].map(quoteWindowsArgument).join(' ');
+}
+
+function quoteWindowsArgument(value) {
+  const text = String(value);
+  if (!/[()\s&|<>^"]/.test(text)) {
+    return text;
+  }
+
+  return `"${text.replaceAll('"', '\\"')}"`;
+}
+
+function toPowerShellString(value) {
+  return `'${String(value).replaceAll("'", "''")}'`;
+}
+
+async function walk(directory) {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const files = [];
+
+  for (const entry of entries) {
+    const fullPath = join(directory, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...await walk(fullPath));
+    } else {
+      files.push(fullPath);
+    }
+  }
+
+  return files;
+}
+
+async function serveStatic(pathname, response) {
+  const requestedPath = pathname === '/' ? '/index.html' : pathname;
+  const filePath = resolve(publicDir, `.${requestedPath}`);
+
+  if (!filePath.startsWith(publicDir)) {
+    response.writeHead(403);
+    response.end('Forbidden');
+    return;
+  }
+
+  if (!existsSync(filePath) || !(await stat(filePath)).isFile()) {
+    response.writeHead(404);
+    response.end('Not found');
+    return;
+  }
+
+  const headers = {
+    'Content-Type': contentTypes.get(extname(filePath)) ?? 'application/octet-stream'
+  };
+  if (requestedPath === '/index.html') {
+    headers['Set-Cookie'] = sessionCookie;
+  }
+
+  response.writeHead(200, headers);
+  createReadStream(filePath).pipe(response);
+}
+
+async function serveReport(pathname, response) {
+  const match = pathname.match(/^\/reports\/([^/]+)\/playwright(?:\/(.*))?$/);
+  if (!match) {
+    response.writeHead(404);
+    response.end('Not found');
+    return;
+  }
+
+  const repoName = decodeURIComponent(match[1]);
+  if (repoName.includes('/') || repoName.includes('\\') || repoName === '..') {
+    response.writeHead(403);
+    response.end('Forbidden');
+    return;
+  }
+
+  const repoDir = resolve(workspaceRoot, repoName);
+  if (!(await isAppAutomationRepo(repoDir))) {
+    response.writeHead(404);
+    response.end('Not found');
+    return;
+  }
+
+  const requestedPath = match[2] || 'index.html';
+  const reportRoot = resolve(repoDir, 'playwright-report');
+  const filePath = resolve(reportRoot, requestedPath);
+
+  if (!filePath.startsWith(reportRoot)) {
+    response.writeHead(403);
+    response.end('Forbidden');
+    return;
+  }
+
+  if (!existsSync(filePath) || !(await stat(filePath)).isFile()) {
+    response.writeHead(404);
+    response.end('Not found');
+    return;
+  }
+
+  response.writeHead(200, {
+    'Content-Type': contentTypes.get(extname(filePath)) ?? 'application/octet-stream'
+  });
+  createReadStream(filePath).pipe(response);
+}
+
+async function readRequestJson(request) {
+  const chunks = [];
+  for await (const chunk of request) {
+    chunks.push(chunk);
+  }
+
+  const body = Buffer.concat(chunks).toString('utf-8');
+  return body ? JSON.parse(body) : {};
+}
+
+async function sendJson(response, data, status = 200) {
+  response.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' });
+  response.end(JSON.stringify(data, null, 2));
+}

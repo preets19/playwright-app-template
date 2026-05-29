@@ -1,0 +1,49 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Automation: Setup Once",
+      "type": "shell",
+      "command": "${workspaceFolder}\\scripts\\windows\\setup-once.cmd",
+      "problemMatcher": []
+    },
+    {
+      "label": "Automation: Start Dashboard",
+      "type": "shell",
+      "command": "${workspaceFolder}\\scripts\\windows\\start-dashboard.cmd",
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "Automation: Open Playwright UI",
+      "type": "shell",
+      "command": "${workspaceFolder}\\scripts\\windows\\open-playwright-ui.cmd",
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "Automation: Start All",
+      "type": "shell",
+      "command": "${workspaceFolder}\\scripts\\windows\\start-all.cmd",
+      "problemMatcher": []
+    },
+    {
+      "label": "Automation: Run Headed",
+      "type": "shell",
+      "command": "${workspaceFolder}\\scripts\\windows\\run-headed.cmd",
+      "problemMatcher": []
+    },
+    {
+      "label": "Automation: Validate",
+      "type": "shell",
+      "command": "${workspaceFolder}\\scripts\\windows\\run-validation.cmd",
+      "problemMatcher": []
+    },
+    {
+      "label": "Automation: Stop",
+      "type": "shell",
+      "command": "${workspaceFolder}\\scripts\\windows\\stop-automation.cmd",
+      "problemMatcher": []
+    }
+  ]
+}

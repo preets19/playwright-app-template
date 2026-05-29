@@ -1,0 +1,10 @@
+node_modules/
+dist/
+playwright-report/
+test-results/
+.tmp/
+.npm-cache/
+*.tgz
+.env
+auth.json
+*.auth.json
