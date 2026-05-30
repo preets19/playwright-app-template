@@ -58,6 +58,10 @@ p {
   color: var(--muted);
 }
 
+.copyright-text {
+  font-size: 12px;
+}
+
 .dashboard-shell {
   display: grid;
   grid-template-columns: minmax(380px, 1fr) minmax(360px, 0.8fr);
