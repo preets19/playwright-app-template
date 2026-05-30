@@ -210,7 +210,7 @@ button:hover {
 button:disabled {
   border-color: #a7b0ba;
   background: #a7b0ba;
-  cursor: progress;
+  cursor: not-allowed;
 }
 
 label {

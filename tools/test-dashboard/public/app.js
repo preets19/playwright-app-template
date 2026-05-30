@@ -5,12 +5,14 @@ const reportLink = document.querySelector('#reportLink');
 const repoSelect = document.querySelector('#repoSelect');
 const workspaceRoot = document.querySelector('#workspaceRoot');
 const settingsForm = document.querySelector('#settingsForm');
+const saveSettingsButton = document.querySelector('#saveSettingsButton');
 const artifactList = document.querySelector('#artifactList');
 const stopDialog = document.querySelector('#stopDialog');
 
 let currentSettings;
 let currentRepoDir = localStorage.getItem('selectedRepoDir') ?? '';
 let isStoppingAutomation = false;
+let savedSettingsSnapshot = '';
 
 document.querySelector('#refreshButton').addEventListener('click', refresh);
 document.querySelector('#stopAutomationButton').addEventListener('click', () => stopDialog.showModal());
@@ -18,6 +20,7 @@ document.querySelector('#confirmStopButton').addEventListener('click', stopAutom
 reportLink.addEventListener('click', (event) => {
   if (reportLink.getAttribute('aria-disabled') === 'true') {
     event.preventDefault();
+    writeOutput('No test results found. Run tests first.');
   }
 });
 document.querySelector('#cleanupButton').addEventListener('click', cleanup);
@@ -51,8 +54,12 @@ document.querySelectorAll('input[name="browsers"]').forEach((input) => {
     }
 
     writeOutput('Browser selection changed. Save Test Run Settings before running tests.');
+    updateSettingsSaveState();
   });
 });
+
+settingsForm.addEventListener('input', updateSettingsSaveState);
+settingsForm.addEventListener('change', updateSettingsSaveState);
 
 repoSelect.addEventListener('change', async () => {
   currentRepoDir = repoSelect.value;
@@ -161,16 +168,9 @@ function renderStatus(status) {
 }
 
 function renderReportLink(status) {
-  if (status.hasReport && status.reportUrl) {
-    reportLink.href = status.reportUrl;
-    reportLink.classList.remove('disabled-link');
-    reportLink.setAttribute('aria-disabled', 'false');
-    return;
-  }
-
-  reportLink.href = '#';
-  reportLink.classList.add('disabled-link');
-  reportLink.setAttribute('aria-disabled', 'true');
+  reportLink.href = status.reportUrl ?? '#';
+  reportLink.classList.remove('disabled-link');
+  reportLink.setAttribute('aria-disabled', 'false');
 }
 
 function renderSettings(settings) {
@@ -179,6 +179,8 @@ function renderSettings(settings) {
   setSelectedBrowsers(settings.browser?.browsers ?? [settings.browser?.name ?? 'chromium']);
   document.querySelector('#headless').checked = settings.browser?.headless !== false;
   document.querySelector('#slowMo').value = settings.browser?.slowMo ?? 0;
+  savedSettingsSnapshot = settingsSnapshotFromForm();
+  updateSettingsSaveState();
 }
 
 function getSelectedBrowsers() {
@@ -279,6 +281,23 @@ function setBusy(busy) {
     button.disabled = busy;
   });
   repoSelect.disabled = busy;
+  if (!busy) {
+    updateSettingsSaveState();
+  }
+}
+
+function updateSettingsSaveState() {
+  saveSettingsButton.disabled = !currentSettings || settingsSnapshotFromForm() === savedSettingsSnapshot;
+}
+
+function settingsSnapshotFromForm() {
+  return JSON.stringify({
+    appBaseUrl: document.querySelector('#appBaseUrl').value,
+    apiBaseUrl: document.querySelector('#apiBaseUrl').value,
+    browsers: getSelectedBrowsers(),
+    headless: document.querySelector('#headless').checked,
+    slowMo: Number(document.querySelector('#slowMo').value) || 0
+  });
 }
 
 function withRepo(body) {

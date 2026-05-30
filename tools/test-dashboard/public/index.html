@@ -32,7 +32,7 @@
           <div class="button-grid">
             <button data-command="testUi" type="button">Open Interactive UI</button>
             <button data-command="recorder" type="button">Open Recorder UI</button>
-            <button data-command="testAll" type="button">Run Tests Parallel</button>
+            <button data-command="testAll" type="button">Run All Tests Parallel</button>
           </div>
         </section>
 
@@ -69,7 +69,7 @@
             <label for="slowMo">Demo slow motion, ms</label>
             <input id="slowMo" name="slowMo" type="number" min="0" max="5000" step="100">
 
-            <button type="submit">Save Settings</button>
+            <button id="saveSettingsButton" type="submit" disabled>Save Settings</button>
           </form>
         </section>
 
@@ -97,7 +97,7 @@
       <aside class="feedback-pane">
         <section class="panel output-pane" aria-label="Command output">
           <div class="panel-heading">
-            <h2>Output</h2>
+            <h2>Console Output</h2>
             <a id="reportLink" class="button-link disabled-link" href="#" target="_blank" rel="noreferrer" aria-disabled="true">Open Test Results</a>
           </div>
           <div id="lastCommand" class="last-command">No command has run yet.</div>
