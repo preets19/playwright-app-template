@@ -71,6 +71,10 @@ Pick the automation repo you want to work with, then use the dashboard buttons t
 
 The dashboard binds to `127.0.0.1` by default. Set `DASHBOARD_HOST` and `DASHBOARD_PORT` only if your local policy requires different values.
 
+## Test Settings
+
+`appsettings.json` defines the local browser settings used by both Playwright UI and dashboard test runs. The template uses a `1440x900` viewport as a conservative desktop default for enterprise machines with 1920x1200 displays and 125% Windows scaling.
+
 ## Enterprise Setup Notes
 
 For locked-down networks, configure npm to use your approved internal registry before running setup. If Playwright browser downloads are mirrored internally, set `PLAYWRIGHT_DOWNLOAD_HOST` or `PLAYWRIGHT_BROWSERS_PATH` according to your company standard before running `Setup Automation.cmd`.
