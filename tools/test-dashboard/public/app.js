@@ -8,15 +8,38 @@ const settingsForm = document.querySelector('#settingsForm');
 const saveSettingsButton = document.querySelector('#saveSettingsButton');
 const artifactList = document.querySelector('#artifactList');
 const stopDialog = document.querySelector('#stopDialog');
+const testsDialog = document.querySelector('#testsDialog');
+const selectedTestsGrid = document.querySelector('#selectedTestsGrid');
+const testSearchInput = document.querySelector('#testSearchInput');
+const testResultsBody = document.querySelector('#testResultsBody');
+const searchTestsButton = document.querySelector('#searchTestsButton');
+const selectAllTestsButton = document.querySelector('#selectAllTestsButton');
+const clearSelectedTestsButton = document.querySelector('#clearSelectedTestsButton');
+const saveSelectedTestsButton = document.querySelector('#saveSelectedTestsButton');
 
 let currentSettings;
 let currentRepoDir = localStorage.getItem('selectedRepoDir') ?? '';
 let isStoppingAutomation = false;
 let savedSettingsSnapshot = '';
+let discoveredTests = [];
+let visibleTests = [];
+let selectedTestIds = new Set();
+let draftSelectedTestIds = new Set();
 
 document.querySelector('#refreshButton').addEventListener('click', refresh);
 document.querySelector('#stopAutomationButton').addEventListener('click', () => stopDialog.showModal());
 document.querySelector('#confirmStopButton').addEventListener('click', stopAutomation);
+document.querySelector('#selectTestsButton').addEventListener('click', openTestsDialog);
+searchTestsButton.addEventListener('click', searchTests);
+testSearchInput.addEventListener('keydown', (event) => {
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    searchTests();
+  }
+});
+selectAllTestsButton.addEventListener('click', selectVisibleTests);
+clearSelectedTestsButton.addEventListener('click', clearSelectedTests);
+saveSelectedTestsButton.addEventListener('click', saveSelectedTests);
 reportLink.addEventListener('click', (event) => {
   if (reportLink.getAttribute('aria-disabled') === 'true') {
     event.preventDefault();
@@ -65,6 +88,12 @@ repoSelect.addEventListener('change', async () => {
   currentRepoDir = repoSelect.value;
   localStorage.setItem('selectedRepoDir', currentRepoDir);
   artifactList.innerHTML = '';
+  discoveredTests = [];
+  visibleTests = [];
+  selectedTestIds = new Set();
+  draftSelectedTestIds = new Set();
+  renderSelectedTestsGrid();
+  renderTestResults();
   writeOutput(`Selected repo: ${repoSelect.options[repoSelect.selectedIndex]?.textContent ?? currentRepoDir}`);
   await refresh();
 });
@@ -265,6 +294,112 @@ async function loadArtifacts() {
   artifactList.innerHTML = artifacts.length
     ? artifacts.map((artifact) => `<li>${escapeHtml(artifact.file)}</li>`).join('')
     : '<li>No artifacts found.</li>';
+}
+
+async function openTestsDialog() {
+  draftSelectedTestIds = new Set(selectedTestIds);
+  testsDialog.showModal();
+  visibleTests = discoveredTests.length
+    ? filterTests(discoveredTests, testSearchInput.value)
+    : [];
+  renderTestResults('Click Search to discover tests. Leave search criteria blank to show all tests.');
+}
+
+async function searchTests() {
+  testResultsBody.innerHTML = '<div class="test-results-empty">Searching tests...</div>';
+  try {
+    if (!discoveredTests.length) {
+      const result = await api('/api/tests');
+      discoveredTests = result.tests ?? [];
+    }
+
+    visibleTests = filterTests(discoveredTests, testSearchInput.value);
+    renderTestResults();
+  } catch (error) {
+    testResultsBody.innerHTML = `<div class="test-results-empty">${escapeHtml(error instanceof Error ? error.message : String(error))}</div>`;
+  }
+}
+
+function filterTests(tests, criteria) {
+  const term = criteria.trim().toLowerCase();
+  if (!term) {
+    return tests;
+  }
+
+  return tests.filter((test) => [
+    test.title,
+    test.suite,
+    test.file,
+    test.location,
+    test.projects?.join(' ')
+  ].some((value) => String(value ?? '').toLowerCase().includes(term)));
+}
+
+function renderTestResults(emptyMessage = 'No tests found.') {
+  if (!visibleTests.length) {
+    testResultsBody.innerHTML = `<div class="test-results-empty">${escapeHtml(emptyMessage)}</div>`;
+    return;
+  }
+
+  testResultsBody.innerHTML = visibleTests
+    .map((test) => `
+      <label class="test-result-row">
+        <span>
+          <input type="checkbox" value="${escapeHtml(test.id)}" ${draftSelectedTestIds.has(test.id) ? 'checked' : ''}>
+        </span>
+        <span>${escapeHtml(test.title)}</span>
+        <span>${escapeHtml(test.suite || 'No suite')}</span>
+        <span>${escapeHtml(test.file)}</span>
+      </label>
+    `)
+    .join('');
+
+  testResultsBody.querySelectorAll('input[type="checkbox"]').forEach((input) => {
+    input.addEventListener('change', () => {
+      if (input.checked) {
+        draftSelectedTestIds.add(input.value);
+      } else {
+        draftSelectedTestIds.delete(input.value);
+      }
+    });
+  });
+}
+
+function selectVisibleTests() {
+  visibleTests.forEach((test) => draftSelectedTestIds.add(test.id));
+  renderTestResults();
+}
+
+function clearSelectedTests() {
+  draftSelectedTestIds = new Set();
+  renderTestResults();
+}
+
+function saveSelectedTests() {
+  selectedTestIds = new Set(draftSelectedTestIds);
+  renderSelectedTestsGrid();
+  testsDialog.close();
+}
+
+function renderSelectedTestsGrid() {
+  const testsById = new Map(discoveredTests.map((test) => [test.id, test]));
+  const selectedTests = [...selectedTestIds]
+    .map((id) => testsById.get(id))
+    .filter(Boolean);
+
+  if (!selectedTests.length) {
+    selectedTestsGrid.innerHTML = '<div class="empty-grid-state">No Tests Selected</div>';
+    return;
+  }
+
+  selectedTestsGrid.innerHTML = selectedTests
+    .map((test) => `
+      <div class="selected-test-row">
+        <strong>${escapeHtml(test.title)}</strong>
+        <span>${escapeHtml(test.file)}</span>
+      </div>
+    `)
+    .join('');
 }
 
 function renderCommandResult(result) {

@@ -134,6 +134,12 @@ const server = createServer(async (request, response) => {
       return;
     }
 
+    if (url.pathname === '/api/tests') {
+      const repoDir = await getSelectedRepoDir(url);
+      await sendJson(response, await discoverTests(repoDir));
+      return;
+    }
+
     if (url.pathname === '/api/run' && request.method === 'POST') {
       const body = await readRequestJson(request);
       const repoDir = await getSelectedRepoDir(url, body);
@@ -327,6 +333,73 @@ async function readSettings(repoDir) {
 async function writeSettings(repoDir, settings) {
   const path = join(repoDir, 'appsettings.json');
   await writeFile(path, `${JSON.stringify(settings, null, 2)}\n`, 'utf-8');
+}
+
+async function discoverTests(repoDir) {
+  const result = await runProcess(repoDir, 'npx.cmd', ['playwright', 'test', '-c', 'playwright.config.ts', '--list'], {
+    env: localTempEnv(repoDir)
+  });
+
+  if (!result.ok) {
+    throw new Error([result.stdout, result.stderr].filter(Boolean).join('\n') || 'Unable to discover tests.');
+  }
+
+  return {
+    ok: true,
+    tests: parseListedTests(result.stdout)
+  };
+}
+
+function parseListedTests(stdout) {
+  const tests = new Map();
+
+  for (const line of stdout.split(/\r?\n/)) {
+    const test = parseListedTestLine(line);
+    if (!test) {
+      continue;
+    }
+
+    const existing = tests.get(test.id);
+    if (existing) {
+      existing.projects = [...new Set([...existing.projects, ...test.projects])].sort();
+    } else {
+      tests.set(test.id, test);
+    }
+  }
+
+  return [...tests.values()].sort((a, b) => {
+    const fileCompare = a.file.localeCompare(b.file);
+    return fileCompare || a.title.localeCompare(b.title);
+  });
+}
+
+function parseListedTestLine(line) {
+  const match = line.trim().match(/^\[([^\]]+)]\s+›\s+(.+)$/);
+  if (!match) {
+    return null;
+  }
+
+  const [, project, rest] = match;
+  const parts = rest.split(/\s+›\s+/).map((part) => part.trim()).filter(Boolean);
+  if (parts.length < 2) {
+    return null;
+  }
+
+  const location = parts[0];
+  const titleParts = parts.slice(1);
+  const title = titleParts.at(-1) ?? '';
+  const suite = titleParts.slice(0, -1).join(' > ');
+  const file = location.replace(/:\d+:\d+$/, '');
+  const id = `${file}::${suite}::${title}`;
+
+  return {
+    id,
+    title,
+    suite,
+    file,
+    location,
+    projects: [project]
+  };
 }
 
 async function runAllowedCommand(repoDir, id, options = {}) {

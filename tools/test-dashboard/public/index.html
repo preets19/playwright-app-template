@@ -46,21 +46,31 @@
             <label for="apiBaseUrl">API base URL</label>
             <input id="apiBaseUrl" name="apiBaseUrl" type="url">
 
-            <fieldset class="browser-options">
-              <legend>Browsers</legend>
-              <label class="checkbox-row">
-                <input name="browsers" type="checkbox" value="chromium">
-                Chromium
-              </label>
-              <label class="checkbox-row">
-                <input name="browsers" type="checkbox" value="firefox">
-                Firefox
-              </label>
-              <label class="checkbox-row">
-                <input name="browsers" type="checkbox" value="webkit">
-                WebKit
-              </label>
-            </fieldset>
+            <div class="run-settings-grid">
+              <fieldset class="browser-options">
+                <legend>Browsers</legend>
+                <label class="checkbox-row">
+                  <input name="browsers" type="checkbox" value="chromium">
+                  Chromium
+                </label>
+                <label class="checkbox-row">
+                  <input name="browsers" type="checkbox" value="firefox">
+                  Firefox
+                </label>
+                <label class="checkbox-row">
+                  <input name="browsers" type="checkbox" value="webkit">
+                  WebKit
+                </label>
+              </fieldset>
+
+              <fieldset class="selected-tests-panel">
+                <legend>Selected Tests</legend>
+                <button id="selectTestsButton" type="button">Select Tests</button>
+                <div id="selectedTestsGrid" class="selected-tests-grid">
+                  <div class="empty-grid-state">No Tests Selected</div>
+                </div>
+              </fieldset>
+            </div>
 
             <label class="checkbox-row">
               <input id="headless" name="headless" type="checkbox">
@@ -121,6 +131,47 @@
         <div class="modal-actions">
           <button value="cancel" type="submit">No</button>
           <button id="confirmStopButton" class="danger-button" value="confirm" type="button">Yes, Stop Automation</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="testsDialog" class="modal tests-modal">
+      <form method="dialog">
+        <div class="modal-heading">
+          <div>
+            <h2>Select Tests</h2>
+            <p>Search and select tests from the current app repository.</p>
+          </div>
+        </div>
+
+        <div class="test-search-row">
+          <label for="testSearchInput">Search criteria <span>(Leave blank to show all tests.)</span></label>
+          <div class="test-search-controls">
+            <input id="testSearchInput" type="search" placeholder="Search by test name, suite, or file">
+            <button id="searchTestsButton" type="button">Search</button>
+          </div>
+        </div>
+
+        <div class="test-selection-actions">
+          <button id="selectAllTestsButton" type="button">Select All</button>
+          <button id="clearSelectedTestsButton" type="button">Clear Selection</button>
+        </div>
+
+        <div class="test-results-table" aria-label="Test search results">
+          <div class="test-results-header">
+            <span></span>
+            <span>Test</span>
+            <span>Suite</span>
+            <span>File</span>
+          </div>
+          <div id="testResultsBody">
+            <div class="test-results-empty">No Tests Selected</div>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button value="cancel" type="submit">Cancel</button>
+          <button id="saveSelectedTestsButton" type="button">Save Selection</button>
         </div>
       </form>
     </dialog>
