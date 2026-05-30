@@ -413,6 +413,10 @@ async function runAllowedCommand(repoDir, id, options = {}) {
     return runSelectedTests(repoDir);
   }
 
+  if (id === 'testUi') {
+    return runTestUi(repoDir);
+  }
+
   const definition = commands[id];
   if (!definition) {
     throw new Error(`Unknown command: ${id}`);
@@ -430,10 +434,31 @@ async function runAllowedCommand(repoDir, id, options = {}) {
 }
 
 async function runSelectedTests(repoDir) {
+  const selectedLocations = await getSelectedTestLocations(repoDir);
+  if (!selectedLocations.length) {
+    throw new Error('Select one or more tests before running selected tests.');
+  }
+
+  return runProcess(repoDir, commands.testSelected.command, [...commands.testSelected.args, ...selectedLocations], {
+    env: localTempEnv(repoDir)
+  });
+}
+
+async function runTestUi(repoDir) {
+  const selectedLocations = await getSelectedTestLocations(repoDir);
+  const args = ['playwright', 'test', '-c', 'playwright.config.ts', '--ui', ...selectedLocations];
+
+  return runProcess(repoDir, 'npx.cmd', args, {
+    env: localTempEnv(repoDir),
+    detached: true
+  });
+}
+
+async function getSelectedTestLocations(repoDir) {
   const settings = await readSettings(repoDir);
   const selectedTests = Array.isArray(settings.testSelection?.tests) ? settings.testSelection.tests : [];
   if (!selectedTests.length) {
-    throw new Error('Select one or more tests before running selected tests.');
+    return [];
   }
 
   const selectedLocations = [...new Set(selectedTests
@@ -444,9 +469,7 @@ async function runSelectedTests(repoDir) {
     throw new Error('Selected tests were not found. Search again and save the selection before running.');
   }
 
-  return runProcess(repoDir, commands.testSelected.command, [...commands.testSelected.args, ...selectedLocations], {
-    env: localTempEnv(repoDir)
-  });
+  return selectedLocations;
 }
 
 function validateSelectedTestLocation(repoDir, location) {

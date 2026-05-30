@@ -356,8 +356,10 @@ function filterTests(tests, criteria) {
   }
 
   return tests.filter((test) => [
+    getTestCategory(test),
     test.title,
     test.suite,
+    getTestFileName(test),
     test.file,
     test.location,
     test.projects?.join(' ')
@@ -376,9 +378,10 @@ function renderTestResults(emptyMessage = 'No tests found.') {
         <span>
           <input type="checkbox" value="${escapeHtml(test.id)}" ${draftSelectedTestIds.has(test.id) ? 'checked' : ''}>
         </span>
+        <span>${escapeHtml(getTestCategory(test))}</span>
         <span>${escapeHtml(test.title)}</span>
         <span>${escapeHtml(test.suite || 'No suite')}</span>
-        <span>${escapeHtml(test.file)}</span>
+        <span>${escapeHtml(getTestFileName(test))}</span>
       </label>
     `)
     .join('');
@@ -422,14 +425,16 @@ function renderSelectedTestsGrid() {
   selectedTestsGrid.innerHTML = selectedTests
     .map((test) => `
       <div class="selected-test-row">
+        <span>${escapeHtml(getTestCategory(test))}</span>
         <span>${escapeHtml(test.title)}</span>
         <span>${escapeHtml(test.suite || 'No suite')}</span>
-        <span>${escapeHtml(test.file)}</span>
+        <span>${escapeHtml(getTestFileName(test))}</span>
       </div>
     `)
     .join('');
   selectedTestsGrid.insertAdjacentHTML('afterbegin', `
     <div class="selected-test-header">
+      <span>Category</span>
       <span>Test</span>
       <span>Suite</span>
       <span>File</span>
@@ -493,6 +498,19 @@ function mergeTestsById(existingTests, additionalTests) {
     }
   });
   return [...tests.values()];
+}
+
+function getTestCategory(test) {
+  return splitTestPath(test.file)[0] ?? '';
+}
+
+function getTestFileName(test) {
+  const parts = splitTestPath(test.file);
+  return parts.at(-1) ?? '';
+}
+
+function splitTestPath(file) {
+  return String(file ?? '').split(/[\\/]/).filter(Boolean);
 }
 
 function withRepo(body) {
