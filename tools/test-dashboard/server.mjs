@@ -51,6 +51,12 @@ const commands = {
     args: ['test'],
     useLocalTemp: true
   },
+  testSelected: {
+    label: 'Run Selected Tests',
+    command: 'npx.cmd',
+    args: ['playwright', 'test', '-c', 'playwright.config.ts'],
+    useLocalTemp: true
+  },
   testUi: {
     label: 'Open Playwright Test Runner UI',
     command: 'npm.cmd',
@@ -403,6 +409,10 @@ function parseListedTestLine(line) {
 }
 
 async function runAllowedCommand(repoDir, id, options = {}) {
+  if (id === 'testSelected') {
+    return runSelectedTests(repoDir);
+  }
+
   const definition = commands[id];
   if (!definition) {
     throw new Error(`Unknown command: ${id}`);
@@ -417,6 +427,61 @@ async function runAllowedCommand(repoDir, id, options = {}) {
     allowNonZero: definition.allowNonZero,
     detached: definition.detached
   });
+}
+
+async function runSelectedTests(repoDir) {
+  const settings = await readSettings(repoDir);
+  const selectedTests = Array.isArray(settings.testSelection?.tests) ? settings.testSelection.tests : [];
+  if (!selectedTests.length) {
+    throw new Error('Select one or more tests before running selected tests.');
+  }
+
+  const selectedLocations = [...new Set(selectedTests
+    .map((test) => validateSelectedTestLocation(repoDir, test?.location))
+    .filter(Boolean))];
+
+  if (!selectedLocations.length) {
+    throw new Error('Selected tests were not found. Search again and save the selection before running.');
+  }
+
+  return runProcess(repoDir, commands.testSelected.command, [...commands.testSelected.args, ...selectedLocations], {
+    env: localTempEnv(repoDir)
+  });
+}
+
+function validateSelectedTestLocation(repoDir, location) {
+  if (typeof location !== 'string') {
+    return '';
+  }
+
+  const match = location.match(/^(.+):(\d+):(\d+)$/);
+  if (!match) {
+    throw new Error(`Invalid selected test location: ${location}`);
+  }
+
+  const [, file, line, column] = match;
+  const absoluteFile = resolveSelectedTestFile(repoDir, file);
+  const relativePath = relative(repoDir, absoluteFile);
+
+  if (relativePath.startsWith('..') || relativePath === '' || resolve(repoDir, relativePath) !== absoluteFile) {
+    throw new Error(`Selected test must be inside the app repo: ${location}`);
+  }
+
+  return `${normalize(relativePath).replaceAll('\\', '/')}:${line}:${column}`;
+}
+
+function resolveSelectedTestFile(repoDir, file) {
+  const candidates = [
+    resolve(repoDir, file),
+    resolve(repoDir, '_automation', 'tests', file)
+  ];
+
+  const found = candidates.find((candidate) => existsSync(candidate));
+  if (found) {
+    return found;
+  }
+
+  throw new Error(`Selected test file was not found: ${file}`);
 }
 
 async function cleanupGeneratedFiles(repoDir) {

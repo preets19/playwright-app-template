@@ -278,10 +278,12 @@ fieldset {
   font-weight: 600;
 }
 
+.selected-test-header,
 .selected-test-row {
   display: grid;
-  gap: 3px;
-  padding: 8px;
+  grid-template-columns: 1.2fr 0.8fr 1fr;
+  gap: 8px;
+  padding: 8px 10px;
   border-bottom: 1px solid var(--line);
 }
 
@@ -289,17 +291,18 @@ fieldset {
   border-bottom: 0;
 }
 
-.selected-test-row strong,
+.selected-test-header {
+  background: #eef2f6;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .selected-test-row span {
   overflow-wrap: anywhere;
 }
 
-.selected-test-row strong {
-  font-size: 13px;
-}
-
 .selected-test-row span {
-  color: var(--muted);
   font-size: 12px;
 }
 
@@ -500,6 +503,8 @@ pre {
   .button-grid,
   .status-grid,
   .run-settings-grid,
+  .selected-test-header,
+  .selected-test-row,
   .test-search-controls,
   .test-results-header,
   .test-result-row {

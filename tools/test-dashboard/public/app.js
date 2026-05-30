@@ -16,6 +16,7 @@ const searchTestsButton = document.querySelector('#searchTestsButton');
 const selectAllTestsButton = document.querySelector('#selectAllTestsButton');
 const clearSelectedTestsButton = document.querySelector('#clearSelectedTestsButton');
 const saveSelectedTestsButton = document.querySelector('#saveSelectedTestsButton');
+const runSelectedTestsButton = document.querySelector('#runSelectedTestsButton');
 
 let currentSettings;
 let currentRepoDir = localStorage.getItem('selectedRepoDir') ?? '';
@@ -25,6 +26,7 @@ let discoveredTests = [];
 let visibleTests = [];
 let selectedTestIds = new Set();
 let draftSelectedTestIds = new Set();
+let hasDiscoveredAllTests = false;
 
 document.querySelector('#refreshButton').addEventListener('click', refresh);
 document.querySelector('#stopAutomationButton').addEventListener('click', () => stopDialog.showModal());
@@ -39,7 +41,8 @@ testSearchInput.addEventListener('keydown', (event) => {
 });
 selectAllTestsButton.addEventListener('click', selectVisibleTests);
 clearSelectedTestsButton.addEventListener('click', clearSelectedTests);
-saveSelectedTestsButton.addEventListener('click', saveSelectedTests);
+saveSelectedTestsButton.addEventListener('click', applySelectedTests);
+runSelectedTestsButton.addEventListener('click', runSelectedTests);
 reportLink.addEventListener('click', (event) => {
   if (reportLink.getAttribute('aria-disabled') === 'true') {
     event.preventDefault();
@@ -92,6 +95,7 @@ repoSelect.addEventListener('change', async () => {
   visibleTests = [];
   selectedTestIds = new Set();
   draftSelectedTestIds = new Set();
+  hasDiscoveredAllTests = false;
   renderSelectedTestsGrid();
   renderTestResults();
   writeOutput(`Selected repo: ${repoSelect.options[repoSelect.selectedIndex]?.textContent ?? currentRepoDir}`);
@@ -112,6 +116,9 @@ settingsForm.addEventListener('submit', async (event) => {
   currentSettings.browser.name = selectedBrowsers[0];
   currentSettings.browser.headless = document.querySelector('#headless').checked;
   currentSettings.browser.slowMo = Number(document.querySelector('#slowMo').value) || 0;
+  currentSettings.testSelection = {
+    tests: getSelectedTestsForSettings()
+  };
 
   await api('/api/settings', {
     method: 'POST',
@@ -208,6 +215,11 @@ function renderSettings(settings) {
   setSelectedBrowsers(settings.browser?.browsers ?? [settings.browser?.name ?? 'chromium']);
   document.querySelector('#headless').checked = settings.browser?.headless !== false;
   document.querySelector('#slowMo').value = settings.browser?.slowMo ?? 0;
+  const savedTests = Array.isArray(settings.testSelection?.tests) ? settings.testSelection.tests : [];
+  discoveredTests = mergeTestsById(discoveredTests, savedTests);
+  selectedTestIds = new Set(savedTests.map((test) => test.id).filter(Boolean));
+  draftSelectedTestIds = new Set(selectedTestIds);
+  renderSelectedTestsGrid();
   savedSettingsSnapshot = settingsSnapshotFromForm();
   updateSettingsSaveState();
 }
@@ -231,15 +243,31 @@ function setSelectedBrowsers(browsers) {
 async function runCommand(id, body = {}) {
   setBusy(true);
   try {
-    const result = await api('/api/run', {
-      method: 'POST',
-      body: withRepo({ id, ...body })
-    });
+    lastCommand.textContent = `Running: ${id}`;
+    writeOutput('Running command. Please wait...');
+    const result = await commandApi('/api/run', withRepo({ id, ...body }));
     renderCommandResult(result);
     await refresh();
+  } catch (error) {
+    lastCommand.textContent = `Failed: ${id}`;
+    writeOutput(error instanceof Error ? error.message : String(error));
   } finally {
     setBusy(false);
   }
+}
+
+async function runSelectedTests() {
+  if (!currentSettings || settingsSnapshotFromForm() !== savedSettingsSnapshot) {
+    writeOutput('Save Test Run Settings before running selected tests.');
+    return;
+  }
+
+  if (!selectedTestIds.size) {
+    writeOutput('Select one or more tests before running selected tests.');
+    return;
+  }
+
+  await runCommand('testSelected');
 }
 
 async function cleanup() {
@@ -308,9 +336,10 @@ async function openTestsDialog() {
 async function searchTests() {
   testResultsBody.innerHTML = '<div class="test-results-empty">Searching tests...</div>';
   try {
-    if (!discoveredTests.length) {
+    if (!hasDiscoveredAllTests) {
       const result = await api('/api/tests');
-      discoveredTests = result.tests ?? [];
+      discoveredTests = mergeTestsById(discoveredTests, result.tests ?? []);
+      hasDiscoveredAllTests = true;
     }
 
     visibleTests = filterTests(discoveredTests, testSearchInput.value);
@@ -375,17 +404,15 @@ function clearSelectedTests() {
   renderTestResults();
 }
 
-function saveSelectedTests() {
+function applySelectedTests() {
   selectedTestIds = new Set(draftSelectedTestIds);
   renderSelectedTestsGrid();
+  updateSettingsSaveState();
   testsDialog.close();
 }
 
 function renderSelectedTestsGrid() {
-  const testsById = new Map(discoveredTests.map((test) => [test.id, test]));
-  const selectedTests = [...selectedTestIds]
-    .map((id) => testsById.get(id))
-    .filter(Boolean);
+  const selectedTests = getSelectedTestsForSettings();
 
   if (!selectedTests.length) {
     selectedTestsGrid.innerHTML = '<div class="empty-grid-state">No Tests Selected</div>';
@@ -395,11 +422,19 @@ function renderSelectedTestsGrid() {
   selectedTestsGrid.innerHTML = selectedTests
     .map((test) => `
       <div class="selected-test-row">
-        <strong>${escapeHtml(test.title)}</strong>
+        <span>${escapeHtml(test.title)}</span>
+        <span>${escapeHtml(test.suite || 'No suite')}</span>
         <span>${escapeHtml(test.file)}</span>
       </div>
     `)
     .join('');
+  selectedTestsGrid.insertAdjacentHTML('afterbegin', `
+    <div class="selected-test-header">
+      <span>Test</span>
+      <span>Suite</span>
+      <span>File</span>
+    </div>
+  `);
 }
 
 function renderCommandResult(result) {
@@ -431,8 +466,33 @@ function settingsSnapshotFromForm() {
     apiBaseUrl: document.querySelector('#apiBaseUrl').value,
     browsers: getSelectedBrowsers(),
     headless: document.querySelector('#headless').checked,
-    slowMo: Number(document.querySelector('#slowMo').value) || 0
+    slowMo: Number(document.querySelector('#slowMo').value) || 0,
+    testSelection: getSelectedTestsForSettings()
   });
+}
+
+function getSelectedTestsForSettings() {
+  const testsById = new Map(discoveredTests.map((test) => [test.id, test]));
+  return [...selectedTestIds]
+    .map((id) => testsById.get(id))
+    .filter(Boolean)
+    .map((test) => ({
+      id: test.id,
+      title: test.title,
+      suite: test.suite,
+      file: test.file,
+      location: test.location
+    }));
+}
+
+function mergeTestsById(existingTests, additionalTests) {
+  const tests = new Map();
+  [...existingTests, ...additionalTests].forEach((test) => {
+    if (test?.id) {
+      tests.set(test.id, test);
+    }
+  });
+  return [...tests.values()];
 }
 
 function withRepo(body) {
@@ -452,6 +512,21 @@ async function api(path, options = {}, includeRepo = true) {
 
   const json = await response.json();
   if (!response.ok || json.ok === false) {
+    throw new Error(json.error ?? 'Request failed');
+  }
+
+  return json;
+}
+
+async function commandApi(path, body) {
+  const response = await fetch(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body
+  });
+
+  const json = await response.json();
+  if (!response.ok) {
     throw new Error(json.error ?? 'Request failed');
   }
 
