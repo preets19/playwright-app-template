@@ -18,6 +18,13 @@ const sessionCookie = `automation_dashboard_session=${sessionToken}; HttpOnly; S
 const heartbeatTimeoutMs = Number(process.env.DASHBOARD_HEARTBEAT_TIMEOUT_MS ?? 120_000);
 let lastDashboardHeartbeat = 0;
 
+const playwrightConfigNames = [
+  'playwright.config.ts',
+  'playwright.config.js',
+  'playwright.config.mjs',
+  'playwright.config.cjs'
+];
+
 const contentTypes = new Map([
   ['.html', 'text/html; charset=utf-8'],
   ['.css', 'text/css; charset=utf-8'],
@@ -134,6 +141,10 @@ const server = createServer(async (request, response) => {
     if (url.pathname === '/api/settings' && request.method === 'POST') {
       const body = await readRequestJson(request);
       const repoDir = await getSelectedRepoDir(url, body);
+      const repoInfo = await getRepoInfo(repoDir);
+      if (repoInfo.type !== 'framework') {
+        throw new Error('This repo is not using the automation framework. Test Run Settings cannot be saved.');
+      }
       delete body.repoDir;
       await writeSettings(repoDir, body);
       await sendJson(response, { ok: true });
@@ -234,10 +245,12 @@ async function listAppRepos() {
     }
 
     const repoDir = join(workspaceRoot, entry.name);
-    if (await isAppAutomationRepo(repoDir)) {
+    const repoInfo = await getRepoInfo(repoDir);
+    if (repoInfo.type !== 'unsupported') {
       repos.push({
         name: entry.name,
-        path: repoDir
+        path: repoDir,
+        type: repoInfo.type
       });
     }
   }
@@ -260,23 +273,22 @@ async function getSelectedRepoDir(url, body = {}) {
     throw new Error('Selected repo must be under the local Source\\Repo workspace.');
   }
 
-  if (!(await isAppAutomationRepo(repoDir))) {
-    throw new Error('Selected folder is not a valid app automation repo.');
+  const repoInfo = await getRepoInfo(repoDir);
+  if (repoInfo.type === 'unsupported') {
+    throw new Error('Selected folder is not a supported Playwright automation repo.');
   }
 
   return repoDir;
 }
 
 async function isAppAutomationRepo(repoDir) {
-  const packagePath = join(repoDir, 'package.json');
-  const requiredFiles = [
-    packagePath,
-    join(repoDir, 'playwright.config.ts'),
-    join(repoDir, 'appsettings.json')
-  ];
+  return (await getRepoInfo(repoDir)).type !== 'unsupported';
+}
 
-  if (!requiredFiles.every((file) => existsSync(file))) {
-    return false;
+async function getRepoInfo(repoDir) {
+  const packagePath = join(repoDir, 'package.json');
+  if (!existsSync(packagePath)) {
+    return { type: 'unsupported' };
   }
 
   try {
@@ -285,13 +297,28 @@ async function isAppAutomationRepo(repoDir) {
       ...(packageJson.dependencies ?? {}),
       ...(packageJson.devDependencies ?? {})
     };
-    return Object.hasOwn(dependencies, '@your-org/playwright-base-framework');
+    const configPath = playwrightConfigNames.map((name) => join(repoDir, name)).find((file) => existsSync(file));
+    const hasFramework = Object.hasOwn(dependencies, '@your-org/playwright-base-framework');
+    const hasPlaywright = Object.hasOwn(dependencies, '@playwright/test') || Object.hasOwn(dependencies, 'playwright');
+    const hasAppSettings = existsSync(join(repoDir, 'appsettings.json'));
+    const hasAutomationTests = existsSync(join(repoDir, '_automation', 'tests'));
+
+    if (configPath && hasFramework && hasAppSettings && hasAutomationTests) {
+      return { type: 'framework', configPath };
+    }
+
+    if (configPath && hasPlaywright) {
+      return { type: 'generic-playwright', configPath };
+    }
+
+    return { type: 'unsupported' };
   } catch {
-    return false;
+    return { type: 'unsupported' };
   }
 }
 
 async function getStatus(repoDir) {
+  const repoInfo = await getRepoInfo(repoDir);
   const [nodeVersion, npmVersion, playwrightVersion] = await Promise.all([
     runProcess(repoDir, 'node', ['--version']),
     runProcess(repoDir, 'npm.cmd', ['--version']),
@@ -302,6 +329,8 @@ async function getStatus(repoDir) {
   return {
     rootDir: repoDir,
     repoName: basename(repoDir),
+    repoType: repoInfo.type,
+    compatibilityMessage: getCompatibilityMessage(repoInfo.type),
     workspaceRoot,
     node: nodeVersion.stdout.trim(),
     npm: npmVersion.stdout.trim(),
@@ -332,8 +361,37 @@ function getReportUrl(repoDir) {
 }
 
 async function readSettings(repoDir) {
+  const repoInfo = await getRepoInfo(repoDir);
+  if (repoInfo.type !== 'framework') {
+    return getGenericSettings(repoDir);
+  }
+
   const path = join(repoDir, 'appsettings.json');
   return JSON.parse(await readFile(path, 'utf-8'));
+}
+
+function getGenericSettings(repoDir) {
+  return {
+    repoType: 'generic-playwright',
+    application: { baseUrl: '' },
+    api: { baseUrl: '' },
+    browser: {
+      name: 'chromium',
+      browsers: ['project settings'],
+      headless: true,
+      slowMo: 0
+    },
+    testSelection: { tests: [] },
+    message: 'This repo is not using the automation framework. Test execution is available, but framework settings are disabled.'
+  };
+}
+
+function getCompatibilityMessage(repoType) {
+  if (repoType === 'generic-playwright') {
+    return 'Repo incompatible with framework. Test execution is available, but framework settings and repo-modifying actions are disabled.';
+  }
+
+  return '';
 }
 
 async function writeSettings(repoDir, settings) {
@@ -342,7 +400,7 @@ async function writeSettings(repoDir, settings) {
 }
 
 async function discoverTests(repoDir) {
-  const result = await runProcess(repoDir, 'npx.cmd', ['playwright', 'test', '-c', 'playwright.config.ts', '--list'], {
+  const result = await runProcess(repoDir, 'npx.cmd', ['playwright', 'test', ...await getPlaywrightConfigArgs(repoDir), '--list'], {
     env: localTempEnv(repoDir)
   });
 
@@ -410,11 +468,19 @@ function parseListedTestLine(line) {
 
 async function runAllowedCommand(repoDir, id, options = {}) {
   if (id === 'testSelected') {
-    return runSelectedTests(repoDir);
+    return runSelectedTests(repoDir, options.tests);
   }
 
   if (id === 'testUi') {
-    return runTestUi(repoDir);
+    return runTestUi(repoDir, options.tests);
+  }
+
+  if (id === 'testAll') {
+    return runAllTests(repoDir);
+  }
+
+  if (id === 'listTests') {
+    return runListTests(repoDir);
   }
 
   const definition = commands[id];
@@ -433,20 +499,32 @@ async function runAllowedCommand(repoDir, id, options = {}) {
   });
 }
 
-async function runSelectedTests(repoDir) {
-  const selectedLocations = await getSelectedTestLocations(repoDir);
-  if (!selectedLocations.length) {
-    throw new Error('Select one or more tests before running selected tests.');
-  }
-
-  return runProcess(repoDir, commands.testSelected.command, [...commands.testSelected.args, ...selectedLocations], {
+async function runAllTests(repoDir) {
+  return runProcess(repoDir, 'npx.cmd', ['playwright', 'test', ...await getPlaywrightConfigArgs(repoDir)], {
     env: localTempEnv(repoDir)
   });
 }
 
-async function runTestUi(repoDir) {
-  const selectedLocations = await getSelectedTestLocations(repoDir);
-  const args = ['playwright', 'test', '-c', 'playwright.config.ts', '--ui', ...selectedLocations];
+async function runListTests(repoDir) {
+  return runProcess(repoDir, 'npx.cmd', ['playwright', 'test', ...await getPlaywrightConfigArgs(repoDir), '--list'], {
+    env: localTempEnv(repoDir)
+  });
+}
+
+async function runSelectedTests(repoDir, tests) {
+  const selectedLocations = await getSelectedTestLocations(repoDir, tests);
+  if (!selectedLocations.length) {
+    throw new Error('Select one or more tests before running selected tests.');
+  }
+
+  return runProcess(repoDir, 'npx.cmd', ['playwright', 'test', ...await getPlaywrightConfigArgs(repoDir), ...selectedLocations], {
+    env: localTempEnv(repoDir)
+  });
+}
+
+async function runTestUi(repoDir, tests) {
+  const selectedLocations = await getSelectedTestLocations(repoDir, tests);
+  const args = ['playwright', 'test', ...await getPlaywrightConfigArgs(repoDir), '--ui', ...selectedLocations];
 
   return runProcess(repoDir, 'npx.cmd', args, {
     env: localTempEnv(repoDir),
@@ -454,9 +532,12 @@ async function runTestUi(repoDir) {
   });
 }
 
-async function getSelectedTestLocations(repoDir) {
-  const settings = await readSettings(repoDir);
-  const selectedTests = Array.isArray(settings.testSelection?.tests) ? settings.testSelection.tests : [];
+async function getSelectedTestLocations(repoDir, tests) {
+  const repoInfo = await getRepoInfo(repoDir);
+  const settings = repoInfo.type === 'framework' ? await readSettings(repoDir) : {};
+  const selectedTests = Array.isArray(tests)
+    ? tests
+    : Array.isArray(settings.testSelection?.tests) ? settings.testSelection.tests : [];
   if (!selectedTests.length) {
     return [];
   }
@@ -470,6 +551,15 @@ async function getSelectedTestLocations(repoDir) {
   }
 
   return selectedLocations;
+}
+
+async function getPlaywrightConfigArgs(repoDir) {
+  const repoInfo = await getRepoInfo(repoDir);
+  if (!repoInfo.configPath) {
+    throw new Error('Playwright config file was not found.');
+  }
+
+  return ['-c', normalize(relative(repoDir, repoInfo.configPath)).replaceAll('\\', '/')];
 }
 
 function validateSelectedTestLocation(repoDir, location) {

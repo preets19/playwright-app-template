@@ -116,6 +116,17 @@ p {
   overflow-wrap: anywhere;
 }
 
+.compatibility-notice {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid #c79b2b;
+  border-radius: 6px;
+  background: #fff8e6;
+  color: #6f4e00;
+  font-size: 13px;
+  font-weight: 600;
+}
+
 .status-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

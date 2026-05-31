@@ -4,6 +4,7 @@ const lastCommand = document.querySelector('#lastCommand');
 const reportLink = document.querySelector('#reportLink');
 const repoSelect = document.querySelector('#repoSelect');
 const workspaceRoot = document.querySelector('#workspaceRoot');
+const repoCompatibilityNotice = document.querySelector('#repoCompatibilityNotice');
 const settingsForm = document.querySelector('#settingsForm');
 const saveSettingsButton = document.querySelector('#saveSettingsButton');
 const artifactList = document.querySelector('#artifactList');
@@ -20,6 +21,7 @@ const runSelectedTestsButton = document.querySelector('#runSelectedTestsButton')
 
 let currentSettings;
 let currentRepoDir = localStorage.getItem('selectedRepoDir') ?? '';
+let currentRepoType = 'framework';
 let isStoppingAutomation = false;
 let savedSettingsSnapshot = '';
 let discoveredTests = [];
@@ -58,7 +60,7 @@ document.querySelector('#installBrowsersButton').addEventListener('click', () =>
 });
 
 document.querySelectorAll('[data-command]').forEach((button) => {
-  button.addEventListener('click', () => runCommand(button.dataset.command));
+  button.addEventListener('click', () => runCommand(button.dataset.command, getCommandBody(button.dataset.command)));
 });
 
 window.addEventListener('beforeunload', (event) => {
@@ -186,8 +188,11 @@ function renderRepos(repoInfo) {
 }
 
 function renderStatus(status) {
+  currentRepoType = status.repoType ?? 'framework';
+  renderCompatibilityNotice(status);
   const items = [
     ['Repo', status.repoName ?? ''],
+    ['Repo Type', currentRepoType === 'framework' ? 'Framework' : 'Generic Playwright'],
     ['Browsers', status.browsers?.join(', ') ?? ''],
     ['Headless', String(status.headless)],
     ['Slow motion', `${status.slowMo} ms`],
@@ -203,6 +208,12 @@ function renderStatus(status) {
   renderReportLink(status);
 }
 
+function renderCompatibilityNotice(status) {
+  const message = status.compatibilityMessage ?? '';
+  repoCompatibilityNotice.hidden = !message;
+  repoCompatibilityNotice.textContent = message;
+}
+
 function renderReportLink(status) {
   reportLink.href = status.reportUrl ?? '#';
   reportLink.classList.remove('disabled-link');
@@ -215,13 +226,30 @@ function renderSettings(settings) {
   setSelectedBrowsers(settings.browser?.browsers ?? [settings.browser?.name ?? 'chromium']);
   document.querySelector('#headless').checked = settings.browser?.headless !== false;
   document.querySelector('#slowMo').value = settings.browser?.slowMo ?? 0;
-  const savedTests = Array.isArray(settings.testSelection?.tests) ? settings.testSelection.tests : [];
+  const savedTests = currentRepoType === 'generic-playwright'
+    ? getGenericRepoSelection()
+    : Array.isArray(settings.testSelection?.tests) ? settings.testSelection.tests : [];
   discoveredTests = mergeTestsById(discoveredTests, savedTests);
   selectedTestIds = new Set(savedTests.map((test) => test.id).filter(Boolean));
   draftSelectedTestIds = new Set(selectedTestIds);
   renderSelectedTestsGrid();
   savedSettingsSnapshot = settingsSnapshotFromForm();
+  setFrameworkSettingsEnabled(currentRepoType === 'framework');
   updateSettingsSaveState();
+}
+
+function setFrameworkSettingsEnabled(enabled) {
+  [
+    '#appBaseUrl',
+    '#apiBaseUrl',
+    '#headless',
+    '#slowMo',
+    'input[name="browsers"]'
+  ].forEach((selector) => {
+    document.querySelectorAll(selector).forEach((input) => {
+      input.disabled = !enabled;
+    });
+  });
 }
 
 function getSelectedBrowsers() {
@@ -257,7 +285,7 @@ async function runCommand(id, body = {}) {
 }
 
 async function runSelectedTests() {
-  if (!currentSettings || settingsSnapshotFromForm() !== savedSettingsSnapshot) {
+  if (currentRepoType === 'framework' && (!currentSettings || settingsSnapshotFromForm() !== savedSettingsSnapshot)) {
     writeOutput('Save Test Run Settings before running selected tests.');
     return;
   }
@@ -267,7 +295,7 @@ async function runSelectedTests() {
     return;
   }
 
-  await runCommand('testSelected');
+  await runCommand('testSelected', getCommandBody('testSelected'));
 }
 
 async function cleanup() {
@@ -410,7 +438,11 @@ function clearSelectedTests() {
 function applySelectedTests() {
   selectedTestIds = new Set(draftSelectedTestIds);
   renderSelectedTestsGrid();
-  updateSettingsSaveState();
+  if (currentRepoType === 'generic-playwright') {
+    saveGenericRepoSelection(getSelectedTestsForSettings());
+  } else {
+    updateSettingsSaveState();
+  }
   testsDialog.close();
 }
 
@@ -462,7 +494,7 @@ function setBusy(busy) {
 }
 
 function updateSettingsSaveState() {
-  saveSettingsButton.disabled = !currentSettings || settingsSnapshotFromForm() === savedSettingsSnapshot;
+  saveSettingsButton.disabled = currentRepoType !== 'framework' || !currentSettings || settingsSnapshotFromForm() === savedSettingsSnapshot;
 }
 
 function settingsSnapshotFromForm() {
@@ -498,6 +530,33 @@ function mergeTestsById(existingTests, additionalTests) {
     }
   });
   return [...tests.values()];
+}
+
+function getCommandBody(id) {
+  if (currentRepoType !== 'generic-playwright' || !['testSelected', 'testUi'].includes(id)) {
+    return {};
+  }
+
+  const selectedTests = getSelectedTestsForSettings();
+  return selectedTests.length
+    ? { tests: selectedTests.map((test) => ({ id: test.id, location: test.location })) }
+    : {};
+}
+
+function getGenericRepoSelection() {
+  try {
+    return JSON.parse(localStorage.getItem(getGenericRepoSelectionKey()) ?? '[]');
+  } catch {
+    return [];
+  }
+}
+
+function saveGenericRepoSelection(tests) {
+  localStorage.setItem(getGenericRepoSelectionKey(), JSON.stringify(tests));
+}
+
+function getGenericRepoSelectionKey() {
+  return `genericTestSelection:${currentRepoDir}`;
 }
 
 function getTestCategory(test) {
