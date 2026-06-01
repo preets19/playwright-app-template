@@ -4,7 +4,7 @@ Use this guide when setup, dashboard, Playwright UI, or tests are not behaving a
 
 ## Setup Automation Failed
 
-Check the command window for the first error message.
+Check Dashboard Home console output for the first error message.
 
 Common causes:
 
@@ -13,29 +13,28 @@ Common causes:
 - Enterprise npm registry settings are missing.
 - Playwright browser downloads are blocked by network policy.
 
-If `package.json` was changed, run `npm install` again.
+If `package.json` was changed, run `Setup Automation` again from Dashboard Home.
 
 ## NPM Says Framework Tarball Is Corrupted Or EINTEGRITY
 
 This can happen when `package-lock.json` was created with a different locally packed framework tarball than the one on this machine.
 
-Try this from the template repo:
+Try this from the app automation repo if you need to manually reset local install state:
 
 ```powershell
 Remove-Item package-lock.json -Force -ErrorAction SilentlyContinue
 Remove-Item node_modules -Recurse -Force -ErrorAction SilentlyContinue
 Remove-Item .npm-cache -Recurse -Force -ErrorAction SilentlyContinue
-.\Setup Automation.cmd
 ```
 
-The setup script refreshes the lockfile after rebuilding the local framework package.
+Then run `Setup Automation` again from Dashboard Home.
 
 ## Dashboard Does Not Open
 
 Try these steps:
 
-1. Double-click `Stop Automation.cmd`.
-2. Double-click `Start Automation Dashboard.cmd`.
+1. Use `stop-automation.cmd` from `playwright-automation-dashboard\scripts\windows`.
+2. From `playwright-automation-dashboard`, double-click `Start Automation Dashboard.cmd`.
 3. Open `http://127.0.0.1:4310` manually in the browser.
 
 If the dashboard still does not open, check whether another process is already using port `4310`.
@@ -46,9 +45,9 @@ This is expected. The dashboard warns before closing because local automation pr
 
 Choose one of these options:
 
-- Stay on the page and click `Stop Automation`.
-- Close the tab anyway and let the dashboard server stop itself after a short grace period.
-- Double-click `Stop Automation.cmd` for immediate cleanup.
+- Stay on the page and click `Stop Automation` or `Stop Dashboard`.
+- Close the tab anyway and let the dashboard server stop itself after a short grace period when supported.
+- Use `stop-automation.cmd` from `playwright-automation-dashboard\scripts\windows` as a failsafe.
 
 ## Dashboard Says Port 4310 Is Already In Use
 
@@ -62,7 +61,7 @@ http://127.0.0.1:4310
 
 If that opens the dashboard, nothing is wrong.
 
-If it opens something else or does not respond, double-click `Stop Automation.cmd`, then start the dashboard again.
+If it opens something else or does not respond, use `stop-automation.cmd` from `playwright-automation-dashboard\scripts\windows`, then start the dashboard again.
 
 ## App Repo Does Not Appear In Dashboard
 
@@ -79,7 +78,7 @@ Check that the selected repo has:
 
 Playwright Interactive UI is best for debugging one browser at a time.
 
-Use `Run Tests Parallel` from the dashboard when you want to run the selected browsers from `appsettings.json`.
+Use `Run Tests Parallel` from Test Dashboard when you want to run the selected browsers from `appsettings.json`.
 
 ## Test Cannot Find A Locator
 

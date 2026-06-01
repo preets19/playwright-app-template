@@ -14,10 +14,10 @@ While both projects live side-by-side in one workspace, `package.json` uses a lo
 "@your-org/playwright-base-framework": "file:../playwright-base-framework/your-org-playwright-base-framework-1.0.0.tgz"
 ```
 
-Use:
+From `playwright-automation-dashboard`, use Dashboard Home:
 
 ```text
-Update Framework.cmd
+4. Update Framework
 ```
 
 to rebuild the sibling framework package and reinstall it into this template or app-specific automation repo.
@@ -38,10 +38,10 @@ Private npm/GitHub Packages example:
 "@your-org/playwright-base-framework": "^1.0.0"
 ```
 
-Then run:
+Then run setup from Dashboard Home:
 
 ```text
-Setup Automation.cmd
+1. Setup Automation
 ```
 
 ## Ownership

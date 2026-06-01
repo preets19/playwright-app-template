@@ -2,12 +2,14 @@
 
 These `.cmd` files avoid PowerShell execution policy issues.
 
+The primary dashboard/tooling repo is now the sibling `playwright-automation-dashboard` repo. Keep dashboard and command-tool updates there. The launchers in this app template are retained during the transition for compatibility with existing app repos.
+
 ## First-Time Setup
 
-Double-click:
+Preferred setup path is Dashboard Home in `playwright-automation-dashboard`:
 
 ```text
-setup-once.cmd
+1. Setup Automation
 ```
 
 This installs npm dependencies and Playwright browsers.
@@ -15,30 +17,30 @@ In managed networks, configure your approved npm registry and any Playwright bro
 
 ## Daily Use
 
-Double-click:
+Preferred entry point:
 
 ```text
-Start Automation Dashboard.cmd
+..\playwright-automation-dashboard\Start Automation Dashboard.cmd
 ```
 
-This starts the dashboard and opens it in the browser.
-One command window remains open on purpose so users can see what is running. Close it with the dashboard `Stop Automation` button or `Stop Automation.cmd`.
+This starts Dashboard Home and lets QA discover, load, set up, and open Test Dashboard for app automation repos.
 
 ## Optional Launchers
 
-- `start-dashboard.cmd`: starts only the dashboard and opens the browser.
+- `setup-once.cmd`: legacy direct setup launcher retained for compatibility.
+- `start-dashboard.cmd`: legacy dashboard launcher retained for compatibility.
 - Dashboard `Open Interactive UI`: opens Playwright Test Runner UI.
 - Dashboard `Open Recorder UI`: opens Playwright Recorder.
 - `run-validation.cmd`: runs the full validation check.
-- `stop-automation.cmd`: stops dashboard and Playwright processes started from this repo.
-- `update-framework.cmd`: rebuilds the sibling framework package and reinstalls it into this template or app-specific automation repo.
+- `stop-automation.cmd`: legacy stop launcher retained for compatibility.
+- `update-framework.cmd`: legacy framework update launcher retained for compatibility.
 
 ## Desktop Shortcut
 
-Create a shortcut to:
+Create a shortcut to the dashboard repo entry point:
 
 ```text
-Start Automation Dashboard.cmd
+..\playwright-automation-dashboard\Start Automation Dashboard.cmd
 ```
 
 Name it:
@@ -47,4 +49,4 @@ Name it:
 Automation Dashboard
 ```
 
-Create another shortcut to `Stop Automation.cmd` as a failsafe if the dashboard is unavailable.
+Use `playwright-automation-dashboard\scripts\windows\stop-automation.cmd` as a failsafe if the dashboard is unavailable.

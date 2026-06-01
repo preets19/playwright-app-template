@@ -12,7 +12,7 @@ Use this guide when a QA team clones `playwright-app-template` and turns it into
 2. Update `playwright-app-template/README.md`:
    - Replace the template description with the app name and purpose.
    - Replace any demo app notes with app-specific setup notes.
-   - Keep the setup, dashboard, and framework update instructions if they still apply.
+   - Keep the setup, dashboard, and framework update instructions pointed at `playwright-automation-dashboard` if that is your team's tooling repo.
 3. Update `playwright-app-template/.github/workflows/playwright.yml` if your repo uses GitHub Actions:
    - Change the workflow `name` to match the app.
    - Change artifact names or labels if they still use template wording.
@@ -24,26 +24,25 @@ Use this guide when a QA team clones `playwright-app-template` and turns it into
 
 ## Install Automation
 
-After the repo has been renamed and configured, double-click:
+After the repo has been renamed and configured, open the sibling dashboard repo:
 
 ```text
-Setup Automation.cmd
+..\playwright-automation-dashboard
 ```
 
-This installs Node dependencies and Playwright browsers.
-
-## Quick Validation
-
-After setup completes, double-click:
+Double-click:
 
 ```text
 Start Automation Dashboard.cmd
 ```
 
-Use the dashboard to run a test or open Playwright Interactive UI.
+Load this app automation repo, then click `1. Setup Automation`.
+This installs Node dependencies and Playwright browsers for the loaded repo.
 
-If the dashboard is still running after your work is done, double-click:
+## Quick Validation
 
-```text
-Stop Automation.cmd
-```
+After setup completes, use Dashboard Home to open Test Dashboard and run a test or open Playwright Interactive UI.
+
+When finished, use `Stop Dashboard` from Dashboard Home or `Stop Automation` from Test Dashboard.
+
+The app repo may still contain copied launchers during the transition, but the dashboard repo is the primary place for dashboard/tooling updates.
