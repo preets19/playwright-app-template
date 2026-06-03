@@ -45,4 +45,4 @@ After setup completes, use Dashboard Home to open Test Dashboard and run a test 
 
 When finished, use `Stop Dashboard` from Dashboard Home or `Stop Automation` from Test Dashboard.
 
-The app repo may still contain copied launchers during the transition, but the dashboard repo is the primary place for dashboard/tooling updates.
+The dashboard repo is the primary place for dashboard/tooling updates; app repos should only contain app-specific automation code.

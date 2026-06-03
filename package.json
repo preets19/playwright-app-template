@@ -5,7 +5,6 @@
   "type": "module",
   "scripts": {
     "framework:build": "npm --prefix ../playwright-base-framework run pack:local",
-    "dashboard": "node tools/test-dashboard/server.mjs",
     "test": "playwright test -c playwright.config.ts",
     "test:ui": "playwright test -c playwright.config.ts --ui",
     "typecheck": "tsc --noEmit",
