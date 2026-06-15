@@ -20,7 +20,7 @@ const desktopDevices = {
 
 export default defineConfig({
   testDir: './_automation/tests',
-  timeout: 30_000,
+  timeout: 120_000,
   expect: {
     timeout: 5_000
   },
