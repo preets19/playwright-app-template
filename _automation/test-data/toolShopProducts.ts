@@ -7,3 +7,7 @@ export const pliersProduct: ToolShopProductModel = {
 export const hammerProduct: ToolShopProductModel = {
   searchTerm: 'hammer'
 };
+
+export const excavatorRentalProduct: ToolShopProductModel = {
+  productName: 'Excavator'
+};

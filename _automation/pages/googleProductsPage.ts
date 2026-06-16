@@ -11,6 +11,8 @@ export class GoogleProductsPage extends BasePage {
 
   async openCompanyInfo(): Promise<GoogleCompanyInfoPage> {
     await this.actions.click(this.companyInfoLink);
-    return new GoogleCompanyInfoPage(this.page);
+    const companyInfoPage = new GoogleCompanyInfoPage(this.page);
+    await companyInfoPage.waitUntilReady();
+    return companyInfoPage;
   }
 }

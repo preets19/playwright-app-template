@@ -1,3 +1,4 @@
 export interface ToolShopProductModel {
-  searchTerm: string;
+  searchTerm?: string;
+  productName?: string;
 }

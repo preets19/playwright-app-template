@@ -6,11 +6,13 @@ export class GoogleHomePage extends BasePage {
   private readonly aboutLink = this.page.getByRole('link', { name: 'About' });
 
   async open(url: string): Promise<void> {
-    await this.page.goto(url);
+    await this.navigateTo(url);
   }
 
   async openAbout(): Promise<GoogleAboutPage> {
     await this.actions.click(this.aboutLink);
-    return new GoogleAboutPage(this.page);
+    const aboutPage = new GoogleAboutPage(this.page);
+    await aboutPage.waitUntilReady();
+    return aboutPage;
   }
 }

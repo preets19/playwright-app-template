@@ -10,14 +10,18 @@ export interface ToolShopAddressModel {
   country: string;
   postalCode: string;
   houseNumber: string;
+  city?: string;
+  state?: string;
+  street?: string;
 }
 
 export interface ToolShopPaymentModel {
   method: string;
-  creditCardNumber: string;
-  expirationDate: string;
-  cvv: string;
-  cardHolderName: string;
+  creditCardNumber?: string;
+  expirationDate?: string;
+  cvv?: string;
+  cardHolderName?: string;
+  monthlyInstallments?: string;
 }
 
 export interface ToolShopGuestCheckoutModel {

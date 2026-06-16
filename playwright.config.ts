@@ -5,12 +5,17 @@ type AppTestSettings = TestSettings & {
   browser: TestSettings['browser'] & {
     browsers?: BrowserName[];
   };
+  ui?: {
+    timeoutMs?: number;
+    pollIntervalMs?: number;
+  };
 };
 
 const settings = ConfigReader.read(process.env.APP_SETTINGS_PATH ?? 'appsettings.json') as AppTestSettings;
 const browserNames: BrowserName[] = Array.isArray(settings.browser.browsers) && settings.browser.browsers.length
   ? settings.browser.browsers
   : [settings.browser.name ?? 'chromium'];
+const uiTimeoutMs = settings.ui?.timeoutMs ?? 120_000;
 
 const desktopDevices = {
   chromium: devices['Desktop Chrome'],
@@ -20,9 +25,9 @@ const desktopDevices = {
 
 export default defineConfig({
   testDir: './_automation/tests',
-  timeout: 120_000,
+  timeout: uiTimeoutMs,
   expect: {
-    timeout: 5_000
+    timeout: uiTimeoutMs
   },
   fullyParallel: true,
   workers: process.env.CI ? 2 : undefined,
@@ -34,7 +39,7 @@ export default defineConfig({
     launchOptions: {
       slowMo: settings.browser.slowMo
     },
-    actionTimeout: 10_000,
+    actionTimeout: uiTimeoutMs,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure'

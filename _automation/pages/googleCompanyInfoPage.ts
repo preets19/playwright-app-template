@@ -13,7 +13,8 @@ export class GoogleCompanyInfoPage extends BasePage {
     const popupPromise = this.page.waitForEvent('popup');
     await this.actions.click(this.newsLink);
     const newsPage = await popupPromise;
-    await newsPage.waitForLoadState('domcontentloaded');
-    return new GoogleNewsPage(newsPage);
+    const googleNewsPage = new GoogleNewsPage(newsPage);
+    await googleNewsPage.waitUntilReady();
+    return googleNewsPage;
   }
 }

@@ -5,14 +5,15 @@ export class MsnHomePage extends BasePage {
   private readonly newsLink = this.page.getByRole('link', { name: 'News', exact: true });
 
   async open(): Promise<void> {
-    await this.page.goto('https://www.msn.com/');
+    await this.navigateTo('https://www.msn.com/');
   }
 
   async openNews(): Promise<MsnNewsPage> {
     const popupPromise = this.page.waitForEvent('popup');
     await this.actions.click(this.newsLink);
     const newsPage = await popupPromise;
-    await newsPage.waitForLoadState('domcontentloaded');
-    return new MsnNewsPage(newsPage);
+    const msnNewsPage = new MsnNewsPage(newsPage);
+    await msnNewsPage.waitUntilReady();
+    return msnNewsPage;
   }
 }
