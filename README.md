@@ -98,16 +98,11 @@ For CI or environment-specific settings, set:
 APP_SETTINGS_PATH=path\to\appsettings.enterprise.json
 ```
 
-## Demo App
+## Sample App
 
-The sample UI test uses SauceDemo:
+The template includes one canonical `sampleCheckout` UI flow against the Practice Software Testing Toolshop demo app. Use it as the reference for framework-compatible structure: models, test data, page objects, workflows, readiness waits, interaction helpers, and specs.
 
-```text
-https://www.saucedemo.com
-standard_user / secret_sauce
-```
-
-The API test is a runnable self-contained sample that starts a local HTTP endpoint during the test. The database test is a real SQL Server smoke test, but it is opt-in because this template cannot assume a local database exists.
+When this template becomes a real app repo, keep the sample only as long as it helps onboarding. New AI-generated tests should use the sample for style, then reuse and extend real app artifacts as they are added.
 
 ## Update Framework
 

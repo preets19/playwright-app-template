@@ -19,8 +19,8 @@ Use this guide when a QA team clones `playwright-app-template` and turns it into
    - Keep the validation, install, and Playwright test steps unless your CI standard requires a different shape.
 4. Update `playwright-app-template/appsettings.json` with the app's base URL, browser defaults, and environment-specific settings.
 5. Rename the repo folder from `playwright-app-template` to the actual application or product name.
-6. Use the files under `_automation` as examples for the first real test flow.
-7. Replace the demo SauceDemo login example once the app-specific flow is in place.
+6. Use the `sample*` files under `_automation` as examples for the first real test flow.
+7. Replace or remove the sample checkout flow once app-specific automation is in place.
 
 ## Install Automation
 

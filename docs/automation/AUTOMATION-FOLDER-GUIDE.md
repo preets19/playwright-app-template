@@ -31,13 +31,13 @@ tests
 
 Models define the shape of data used by automation.
 
-Example: `models/userModel.ts` defines what a user object must contain:
+Example: `models/sampleCheckoutModel.ts` defines what checkout test data must contain:
 
 ```ts
-export interface UserModel {
-  username: string;
-  password: string;
-  displayName: string;
+export interface SampleGuestModel {
+  email: string;
+  firstName: string;
+  lastName: string;
 }
 ```
 
@@ -47,13 +47,11 @@ Use models when the same kind of data is passed through pages, workflows, or tes
 
 Test data contains the actual values used by tests.
 
-Example: `test-data/users.ts` defines a reusable user:
+Example: `test-data/sampleCheckoutData.ts` defines reusable checkout data:
 
 ```ts
-export const standardUser: UserModel = {
-  username: 'standard_user',
-  password: 'secret_sauce',
-  displayName: 'Products'
+export const sampleGuestCheckout: SampleGuestCheckoutModel = {
+  // product, guest, billing address, payment, and expected result
 };
 ```
 
@@ -63,12 +61,12 @@ Use test data for users, accounts, product IDs, API payload examples, expected l
 
 Pages represent app screens or major UI areas.
 
-Example: `pages/loginPage.ts` knows how to interact with the login page:
+Example: `pages/sampleCheckoutPage.ts` knows how to interact with the checkout page:
 
 ```ts
-await this.actions.clearAndFill(this.usernameInput, username);
-await this.actions.clearAndFill(this.passwordInput, password);
-await this.actions.click(this.loginButton);
+await this.actions.selectByValue(this.countrySelect, address.country);
+await this.actions.clearAndFill(this.postalCodeInput, address.postalCode);
+await this.actions.click(this.proceedToPaymentButton);
 ```
 
 Use page classes for locators and screen-level actions. If a button selector changes, update the page file, not every test.
@@ -77,12 +75,12 @@ Use page classes for locators and screen-level actions. If a button selector cha
 
 Workflows combine page actions into business-level journeys.
 
-Example: `workflows/loginWorkflow.ts` opens the login page, logs in, and returns the home page:
+Example: `workflows/sampleCheckoutWorkflow.ts` combines pages into a guest checkout journey:
 
 ```ts
-const loginPage = new LoginPage(this.page);
-await loginPage.open();
-return loginPage.loginAs(user.username, user.password);
+const homePage = new SampleHomePage(this.page);
+await homePage.open();
+const rentalsPage = await homePage.openRentals();
 ```
 
 Use workflows when a test needs to express a business action such as logging in, creating an order, approving a request, or searching for a customer.
@@ -91,13 +89,13 @@ Use workflows when a test needs to express a business action such as logging in,
 
 Tests are the executable specifications.
 
-Example: `tests/ui/login.spec.ts` verifies that a standard user can log in:
+Example: `tests/ui/sampleCheckout.spec.ts` verifies a sample checkout outcome:
 
 ```ts
-const homePage = await new LoginWorkflow(page).login(standardUser);
+const checkout = await new SampleCheckoutWorkflow(page)
+  .checkoutRentalProductAsGuest(sampleGuestCheckout);
 
-await expect.soft(await homePage.isLoaded()).toBeTruthy();
-await expect(await homePage.pageTitleText()).toContain(standardUser.displayName);
+await expect(checkout.paymentSuccessMessage).toContain(sampleGuestCheckout.expectedSuccessMessage);
 ```
 
 Tests should focus on what behavior is being verified. They should use pages, workflows, and test data instead of repeating low-level UI steps.

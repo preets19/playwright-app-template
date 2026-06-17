@@ -44,7 +44,7 @@ Check these items before opening a PR:
 - The test runs locally from the dashboard or Playwright UI.
 - Test results were reviewed.
 - New or changed files are under the right `_automation` folder.
-- Demo SauceDemo references are removed if this is a real app repo.
+- Template `sample*` references are removed or clearly separated if this is a real app repo.
 - No passwords, tokens, or secrets are committed.
 - `package-lock.json` is updated if `package.json` changed.
 - The PR description explains what behavior is now covered.

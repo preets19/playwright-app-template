@@ -1,11 +1,11 @@
 import { BasePage } from '@your-org/playwright-base-framework';
 import type {
-  ToolShopAddressModel,
-  ToolShopGuestModel,
-  ToolShopPaymentModel
-} from '../models/toolShopCheckoutModel.js';
+  SampleAddressModel,
+  SampleGuestModel,
+  SamplePaymentModel
+} from '../models/sampleCheckoutModel.js';
 
-export class ToolShopCheckoutPage extends BasePage {
+export class SampleCheckoutPage extends BasePage {
   private readonly loginHeading = this.page.getByRole('heading', { name: 'Login' });
   private readonly continueAsGuestTab = this.page.getByRole('tab', { name: 'Continue as Guest' });
   private readonly guestEmailInput = this.page.locator('[data-test="guest-email"]');
@@ -22,19 +22,18 @@ export class ToolShopCheckoutPage extends BasePage {
   private readonly proceedToPaymentButton = this.page.locator('[data-test="proceed-3"]');
   private readonly paymentMethodSelect = this.page.locator('[data-test="payment-method"]');
   private readonly monthlyInstallmentsSelect = this.page.locator('[data-test="monthly_installments"]');
-  private readonly creditCardNumberInput = this.page.locator('[data-test="credit_card_number"]');
-  private readonly expirationDateInput = this.page.locator('[data-test="expiration_date"]');
-  private readonly cvvInput = this.page.locator('[data-test="cvv"]');
-  private readonly cardHolderNameInput = this.page.locator('[data-test="card_holder_name"]');
   private readonly finishButton = this.page.locator('[data-test="finish"]');
   private readonly successMessage = this.page.locator('[data-test="payment-success-message"]');
 
-  async isLoaded(): Promise<boolean> {
-    return this.page.url().includes('/checkout') && await this.actions.isVisible(this.loginHeading);
+  override async waitUntilReady(): Promise<void> {
+    await super.waitUntilReady();
+    await this.waits.forVisible(this.loginHeading, { description: 'Checkout login heading' });
   }
 
-  async continueAsGuest(guest: ToolShopGuestModel): Promise<void> {
-    await this.actions.click(this.continueAsGuestTab);
+  async continueAsGuest(guest: SampleGuestModel): Promise<void> {
+    await this.actions.clickTab(this.continueAsGuestTab, this.guestEmailInput, {
+      description: 'Continue as Guest tab'
+    });
     await this.actions.clearAndFill(this.guestEmailInput, guest.email);
     await this.actions.clearAndFill(this.guestFirstNameInput, guest.firstName);
     await this.actions.clearAndFill(this.guestLastNameInput, guest.lastName);
@@ -43,9 +42,10 @@ export class ToolShopCheckoutPage extends BasePage {
 
   async proceedToBillingAddress(): Promise<void> {
     await this.actions.click(this.proceedAsGuestButton);
+    await this.waits.forVisible(this.countrySelect, { description: 'Billing country select' });
   }
 
-  async enterBillingAddress(address: ToolShopAddressModel): Promise<void> {
+  async enterBillingAddress(address: SampleAddressModel): Promise<void> {
     await this.actions.selectByValue(this.countrySelect, address.country);
     await this.actions.clearAndFill(this.postalCodeInput, address.postalCode);
     await this.actions.clearAndFill(this.houseNumberInput, address.houseNumber);
@@ -63,33 +63,17 @@ export class ToolShopCheckoutPage extends BasePage {
     }
 
     await this.actions.click(this.proceedToPaymentButton);
+    await this.waits.forVisible(this.paymentMethodSelect, { description: 'Payment method select' });
   }
 
-  async payByCreditCard(payment: ToolShopPaymentModel): Promise<void> {
-    if (!payment.creditCardNumber || !payment.expirationDate || !payment.cvv || !payment.cardHolderName) {
-      throw new Error('Credit card payment requires card number, expiration date, CVV, and card holder name.');
-    }
-
-    await this.actions.selectByValue(this.paymentMethodSelect, payment.method);
-    await this.actions.clearAndFill(this.creditCardNumberInput, payment.creditCardNumber);
-    await this.actions.clearAndFill(this.expirationDateInput, payment.expirationDate);
-    await this.actions.clearAndFill(this.cvvInput, payment.cvv);
-    await this.actions.clearAndFill(this.cardHolderNameInput, payment.cardHolderName);
-    await this.actions.click(this.finishButton);
-  }
-
-  async payByBuyNowPayLater(payment: ToolShopPaymentModel): Promise<void> {
-    if (!payment.monthlyInstallments) {
-      throw new Error('Buy now pay later payment requires monthlyInstallments.');
-    }
-
+  async payByBuyNowPayLater(payment: SamplePaymentModel): Promise<void> {
     await this.actions.selectByValue(this.paymentMethodSelect, payment.method);
     await this.actions.selectByValue(this.monthlyInstallmentsSelect, payment.monthlyInstallments);
     await this.actions.click(this.finishButton);
   }
 
   async paymentSuccessMessage(): Promise<string> {
-    await this.waits.forVisible(this.successMessage);
+    await this.waits.forVisible(this.successMessage, { description: 'Payment success message' });
     return this.actions.text(this.successMessage);
   }
 }

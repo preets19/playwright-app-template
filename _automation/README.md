@@ -2,7 +2,9 @@
 
 This folder contains the template app automation code that QA and app teams copy and adapt most often.
 
-The included login example is intentionally small. Treat it as a starter template for a real application flow: copy the pattern, rename the files/classes/data, replace the locators, and then grow it into your app's actual automation.
+The included `sampleCheckout` flow is the canonical reference implementation for this template. It shows how models, test data, page objects, workflows, readiness waits, framework interaction helpers, and specs fit together.
+
+Treat `sample*` artifacts as examples. When the repo has real app automation, prefer reusing and extending the real pages, workflows, models, and test data instead of copying the sample blindly.
 
 ## Start Here
 

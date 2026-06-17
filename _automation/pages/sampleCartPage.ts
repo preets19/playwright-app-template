@@ -1,7 +1,7 @@
 import { BasePage } from '@your-org/playwright-base-framework';
-import { ToolShopCheckoutPage } from './toolShopCheckoutPage.js';
+import { SampleCheckoutPage } from './sampleCheckoutPage.js';
 
-export class ToolShopCartPage extends BasePage {
+export class SampleCartPage extends BasePage {
   private readonly productTitle = this.page.locator('[data-test="product-title"]');
   private readonly productPrice = this.page.locator('[data-test="product-price"]');
   private readonly proceedToCheckoutButton = this.page.locator('[data-test="proceed-1"]');
@@ -14,8 +14,11 @@ export class ToolShopCartPage extends BasePage {
     return this.actions.text(this.productPrice.first());
   }
 
-  async proceedToCheckout(): Promise<ToolShopCheckoutPage> {
+  async proceedToCheckout(): Promise<SampleCheckoutPage> {
     await this.actions.click(this.proceedToCheckoutButton);
-    return new ToolShopCheckoutPage(this.page);
+
+    const checkoutPage = new SampleCheckoutPage(this.page);
+    await checkoutPage.waitUntilReady();
+    return checkoutPage;
   }
 }
