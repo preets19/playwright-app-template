@@ -1,10 +1,8 @@
 # App Automation Guide
 
-This folder contains the template app automation code that QA and app teams copy and adapt most often.
+This folder contains app automation models, test data, page objects, reusable workflows, and executable tests.
 
-The included `sampleCheckout` flow is the canonical reference implementation for this template. It shows how models, test data, page objects, workflows, readiness waits, framework interaction helpers, and specs fit together.
-
-Treat `sample*` artifacts as examples. When the repo has real app automation, prefer reusing and extending the real pages, workflows, models, and test data instead of copying the sample blindly.
+Prefer reusing and extending existing real app artifacts before creating new ones. Keep workflows focused on cohesive business capabilities and compose them in tests to avoid duplicated steps.
 
 ## Start Here
 

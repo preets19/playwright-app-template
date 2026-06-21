@@ -6,15 +6,15 @@ Before creating a new flow, read [Automation Folder Guide](AUTOMATION-FOLDER-GUI
 
 ## Use This Pattern
 
-The `sampleCheckout` flow shows the intended structure end to end:
+Build each scenario from app-specific artifacts:
 
-| Template File | Copy/Rename Into |
+| Artifact | Responsibility |
 | --- | --- |
-| `models/sampleCheckoutModel.ts` | A model for your app's user, customer, account, order, request, or other test entity |
-| `test-data/sampleCheckoutData.ts` | Realistic app-specific test data |
-| `pages/sample*.ts` | Page objects for your app screens and components |
-| `workflows/sampleCheckoutWorkflow.ts` | Business workflows such as login, search, create, submit, approve, checkout, or cancel |
-| `tests/ui/sampleCheckout.spec.ts` | Actual UI tests for app behavior |
+| `models` | Typed business data such as users, customers, accounts, orders, or requests |
+| `test-data` | Realistic app-specific values and expected outcomes |
+| `pages` | Locators, readiness, and UI actions for app screens and components |
+| `workflows` | Reusable business capabilities such as login, search, create, approve, or checkout |
+| `tests` | Thin executable scenarios that compose workflows and assert outcomes |
 
 For example, a search feature might add:
 
@@ -46,6 +46,4 @@ Use clear file names that match the app feature:
 - Prefer meaningful test names that describe the user-facing behavior.
 - Avoid duplicating the same login, setup, or navigation steps across many tests.
 
-## Sample Versus Real App Artifacts
-
-Use `sample*` files as a reference for structure and style. Once real app pages, workflows, models, and test data exist, reuse and extend those real artifacts before copying from the sample.
+Before creating an artifact, inspect existing real app pages, workflows, models, and test data. Reuse or extend a matching capability instead of duplicating it.

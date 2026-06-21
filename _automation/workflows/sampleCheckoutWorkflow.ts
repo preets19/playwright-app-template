@@ -1,35 +1,60 @@
 import type { Page } from '@playwright/test';
-import type { SampleGuestCheckoutModel } from '../models/sampleCheckoutModel.js';
-import { SampleHomePage } from '../pages/sampleHomePage.js';
+import type { SampleProductSelectionModel } from '../models/sampleProductSelectionModel.js';
+import type { SampleCheckoutInformationModel } from '../models/sampleCheckoutInformationModel.js';
+import { SampleCartPage } from '../pages/sampleCartPage.js';
+import { SampleCheckoutCompletePage } from '../pages/sampleCheckoutCompletePage.js';
+import { SampleCheckoutInformationPage } from '../pages/sampleCheckoutInformationPage.js';
+import { SampleCheckoutOverviewPage } from '../pages/sampleCheckoutOverviewPage.js';
+
+export interface SampleCheckoutWorkflowResult {
+  checkoutOverviewProductName: string;
+  checkoutOverviewProductPrice: string;
+  checkoutCompleteHeading: string;
+  orderConfirmationMessage: string;
+}
 
 export class SampleCheckoutWorkflow {
   constructor(private readonly page: Page) {}
 
-  async checkoutRentalProductAsGuest(checkout: SampleGuestCheckoutModel) {
-    const homePage = new SampleHomePage(this.page);
-    await homePage.open();
+  async placeOrder(
+    checkoutInformation: SampleCheckoutInformationModel & {
+      expectedInformationPageHeading: string;
+      expectedOverviewPageHeading: string;
+      expectedCompletePageHeading: string;
+      expectedOrderConfirmationMessage: string;
+    },
+    product: SampleProductSelectionModel
+  ): Promise<SampleCheckoutWorkflowResult> {
+    const cartPage = new SampleCartPage(this.page);
+    await cartPage.clickCheckout();
 
-    const rentalsPage = await homePage.openRentals();
-    const detailsPage = await rentalsPage.openRentalProduct(checkout.product);
-    await detailsPage.addToCart();
-    await detailsPage.closeSplitScreenIfVisible();
+    const checkoutInformationPage = new SampleCheckoutInformationPage(this.page);
+    await checkoutInformationPage.waitUntilReady();
+    await checkoutInformationPage.waitForHeadingText(checkoutInformation.expectedInformationPageHeading);
+    await checkoutInformationPage.enterInformation(checkoutInformation);
+    await checkoutInformationPage.continueCheckout();
 
-    const cartPage = await detailsPage.openCart();
-    const cartProduct = {
-      name: await cartPage.productName(),
-      price: await cartPage.price()
-    };
+    const checkoutOverviewPage = new SampleCheckoutOverviewPage(this.page);
+    await checkoutOverviewPage.waitUntilReady();
+    await checkoutOverviewPage.waitForHeadingText(checkoutInformation.expectedOverviewPageHeading);
 
-    const checkoutPage = await cartPage.proceedToCheckout();
-    await checkoutPage.continueAsGuest(checkout.guest);
-    await checkoutPage.proceedToBillingAddress();
-    await checkoutPage.enterBillingAddress(checkout.billingAddress);
-    await checkoutPage.payByBuyNowPayLater(checkout.payment);
+    const checkoutOverviewProductName = await checkoutOverviewPage.getProductName(product.productName);
+    const checkoutOverviewProductPrice = await checkoutOverviewPage.getProductPrice(product.expectedPrice);
+
+    await checkoutOverviewPage.finishOrder();
+
+    const checkoutCompletePage = new SampleCheckoutCompletePage(this.page);
+    await checkoutCompletePage.waitUntilReady();
+    await checkoutCompletePage.waitForHeadingText(checkoutInformation.expectedCompletePageHeading);
+    await checkoutCompletePage.waitForOrderConfirmationText(
+      checkoutInformation.expectedOrderConfirmationMessage
+    );
 
     return {
-      selectedProduct: checkout.product,
-      cartProduct,
-      paymentSuccessMessage: await checkoutPage.paymentSuccessMessage()
+      checkoutOverviewProductName,
+      checkoutOverviewProductPrice,
+      checkoutCompleteHeading: await checkoutCompletePage.getHeadingText(),
+      orderConfirmationMessage: await checkoutCompletePage.getOrderConfirmationText()
     };
   }
 }

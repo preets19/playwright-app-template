@@ -1,0 +1,501 @@
+{
+  "version": 1,
+  "updatedAt": "2026-06-21T22:18:28.744Z",
+  "workflows": [
+    {
+      "id": "20570074-3306-40d3-a32c-4b4c4f686fcc",
+      "workflowName": "SampleAddProductToCartWorkflow",
+      "artifactPath": "_automation/workflows/sampleAddProductToCartWorkflow.ts",
+      "sanitizedRawCode": "test.describe('Regression', () => {\n  test('Add to cart', async ({ page }) => {\n    await page.goto('https://www.saucedemo.com/');\n    await expect(page.locator('#root')).toContainText('Swag Labs');\n    await page.locator('[data-test=\"username\"]').click();\n    await page.locator('[data-test=\"username\"]').fill('<redacted>');\n    await page.locator('[data-test=\"password\"]').click();\n    await page.locator('[data-test=\"password\"]').fill('<redacted>');\n    await page.locator('[data-test=\"login-button\"]').click();\n    await expect(page.locator('[data-test=\"title\"]')).toContainText('Products');\n    await expect(page.locator('[data-test=\"item-4-title-link\"] [data-test=\"inventory-item-name\"]')).toContainText('Sauce Labs Backpack');\n    await expect(page.locator('[data-test=\"inventory-list\"]')).toContainText('$29.99');\n    await page.locator('[data-test=\"add-to-cart-sauce-labs-backpack\"]').click();\n    await page.locator('[data-test=\"shopping-cart-link\"]').click();\n    await expect(page.locator('[data-test=\"title\"]')).toContainText('Your Cart');\n    await expect(page.locator('[data-test=\"inventory-item-name\"]')).toContainText('Sauce Labs Backpack');\n    await expect(page.locator('[data-test=\"inventory-item-price\"]')).toContainText('$29.99');\n  });\n});",
+      "operations": [
+        {
+          "order": 9,
+          "type": "assertion",
+          "intent": "confirm the selected product name",
+          "pageOrStep": "inventory product item",
+          "locatorType": "testid",
+          "locatorValue": "inventory item name",
+          "assertionRole": "intermediate",
+          "meaningful": true
+        },
+        {
+          "order": 10,
+          "type": "assertion",
+          "intent": "confirm the selected product price",
+          "pageOrStep": "inventory product item",
+          "locatorType": "testid",
+          "locatorValue": "inventory list",
+          "assertionRole": "intermediate",
+          "meaningful": true
+        },
+        {
+          "order": 11,
+          "type": "click",
+          "intent": "add the selected product to the cart",
+          "pageOrStep": "inventory product item",
+          "locatorType": "testid",
+          "locatorValue": "add to cart sauce labs backpack",
+          "assertionRole": "none",
+          "meaningful": true
+        },
+        {
+          "order": 12,
+          "type": "click",
+          "intent": "open the shopping cart",
+          "pageOrStep": "inventory page",
+          "locatorType": "testid",
+          "locatorValue": "shopping cart link",
+          "assertionRole": "none",
+          "meaningful": true
+        },
+        {
+          "order": 13,
+          "type": "assertion",
+          "intent": "confirm cart page identity",
+          "pageOrStep": "cart page",
+          "locatorType": "testid",
+          "locatorValue": "title",
+          "assertionRole": "readiness",
+          "meaningful": true
+        },
+        {
+          "order": 14,
+          "type": "assertion",
+          "intent": "confirm the selected product is in the cart",
+          "pageOrStep": "cart product item",
+          "locatorType": "testid",
+          "locatorValue": "inventory item name",
+          "assertionRole": "success",
+          "meaningful": true
+        },
+        {
+          "order": 15,
+          "type": "assertion",
+          "intent": "confirm the selected product price in the cart",
+          "pageOrStep": "cart product item",
+          "locatorType": "testid",
+          "locatorValue": "inventory item price",
+          "assertionRole": "success",
+          "meaningful": true
+        }
+      ],
+      "signature": [
+        {
+          "type": "assertion",
+          "intent": "confirm the selected product name",
+          "pageOrStep": "inventory product item",
+          "locatorType": "testid",
+          "locatorValue": "inventory item name",
+          "assertionRole": "intermediate"
+        },
+        {
+          "type": "assertion",
+          "intent": "confirm the selected product price",
+          "pageOrStep": "inventory product item",
+          "locatorType": "testid",
+          "locatorValue": "inventory list",
+          "assertionRole": "intermediate"
+        },
+        {
+          "type": "click",
+          "intent": "add the selected product to the cart",
+          "pageOrStep": "inventory product item",
+          "locatorType": "testid",
+          "locatorValue": "add to cart sauce labs backpack",
+          "assertionRole": "none"
+        },
+        {
+          "type": "click",
+          "intent": "open the shopping cart",
+          "pageOrStep": "inventory page",
+          "locatorType": "testid",
+          "locatorValue": "shopping cart link",
+          "assertionRole": "none"
+        },
+        {
+          "type": "assertion",
+          "intent": "confirm cart page identity",
+          "pageOrStep": "cart page",
+          "locatorType": "testid",
+          "locatorValue": "title",
+          "assertionRole": "readiness"
+        },
+        {
+          "type": "assertion",
+          "intent": "confirm the selected product is in the cart",
+          "pageOrStep": "cart product item",
+          "locatorType": "testid",
+          "locatorValue": "inventory item name",
+          "assertionRole": "success"
+        },
+        {
+          "type": "assertion",
+          "intent": "confirm the selected product price in the cart",
+          "pageOrStep": "cart product item",
+          "locatorType": "testid",
+          "locatorValue": "inventory item price",
+          "assertionRole": "success"
+        }
+      ],
+      "signatureHash": "1e93f29935ba1fb2aa6f52f1264465d847c7dfb9ebdd81aab4bba3422b776a57",
+      "entryState": "inventory product item: confirm the selected product name",
+      "exitState": "cart product item: confirm the selected product price in the cart",
+      "createdAt": "2026-06-21T03:41:16.968Z",
+      "updatedAt": "2026-06-21T22:18:28.744Z"
+    },
+    {
+      "id": "84685d0e-3d5a-4404-84bc-a41d4849648f",
+      "workflowName": "SampleCheckoutWorkflow",
+      "artifactPath": "_automation/workflows/sampleCheckoutWorkflow.ts",
+      "sanitizedRawCode": "test.describe('Regression', () => {\n  test('User can place order for a product', async ({ page }) => {\n    await page.goto('https://www.saucedemo.com/');\n    await expect(page.getByText('Swag Labs')).toBeVisible();\n    await page.locator('[data-test=\"username\"]').click();\n    await page.locator('[data-test=\"username\"]').fill('<redacted>');\n    await page.locator('[data-test=\"username\"]').press('Tab');\n    await page.locator('[data-test=\"password\"]').fill('<redacted>');\n    await page.locator('[data-test=\"login-button\"]').click();\n    await expect(page.locator('[data-test=\"title\"]')).toBeVisible();\n    await page.locator('[data-test=\"product-sort-container\"]').selectOption('za');\n    await expect(page.locator('[data-test=\"item-1-title-link\"] [data-test=\"inventory-item-name\"]')).toContainText('Sauce Labs Bolt T-Shirt');\n    await expect(page.locator('[data-test=\"inventory-list\"]')).toContainText('$15.99');\n    await page.locator('[data-test=\"add-to-cart-sauce-labs-bolt-t-shirt\"]').click();\n    await page.locator('[data-test=\"shopping-cart-link\"]').click();\n    await expect(page.locator('[data-test=\"title\"]')).toBeVisible();\n    await expect(page.locator('[data-test=\"inventory-item-name\"]')).toContainText('Sauce Labs Bolt T-Shirt');\n    await expect(page.locator('[data-test=\"inventory-item-price\"]')).toContainText('$15.99');\n    await page.locator('[data-test=\"checkout\"]').click();\n    await expect(page.locator('[data-test=\"title\"]')).toBeVisible();\n    await page.locator('[data-test=\"firstName\"]').click();\n    await page.locator('[data-test=\"firstName\"]').fill('<redacted>');\n    await page.locator('[data-test=\"firstName\"]').press('Tab');\n    await page.locator('[data-test=\"lastName\"]').fill('<redacted>');\n    await page.locator('[data-test=\"lastName\"]').press('Tab');\n    await page.locator('[data-test=\"postalCode\"]').fill('<redacted>');\n    await page.locator('[data-test=\"continue\"]').click();\n    await expect(page.locator('[data-test=\"title\"]')).toBeVisible();\n    await expect(page.locator('[data-test=\"inventory-item-name\"]')).toContainText('Sauce Labs Bolt T-Shirt');\n    await expect(page.locator('[data-test=\"inventory-item-price\"]')).toContainText('$15.99');\n    await page.locator('[data-test=\"finish\"]').click();\n    await expect(page.locator('[data-test=\"title\"]')).toBeVisible();\n    await expect(page.locator('[data-test=\"complete-header\"]')).toBeVisible();\n  });\n});",
+      "operations": [
+        {
+          "order": 17,
+          "type": "click",
+          "intent": "start checkout",
+          "pageOrStep": "cart page",
+          "locatorType": "testid",
+          "locatorValue": "checkout",
+          "assertionRole": "none",
+          "meaningful": true
+        },
+        {
+          "order": 18,
+          "type": "assertion",
+          "intent": "confirm the checkout information page is ready",
+          "pageOrStep": "checkout information page",
+          "locatorType": "testid",
+          "locatorValue": "title",
+          "assertionRole": "readiness",
+          "meaningful": true
+        },
+        {
+          "order": 20,
+          "type": "fill",
+          "intent": "enter checkout first name",
+          "pageOrStep": "checkout information form",
+          "locatorType": "testid",
+          "locatorValue": "firstname",
+          "assertionRole": "none",
+          "meaningful": true
+        },
+        {
+          "order": 22,
+          "type": "fill",
+          "intent": "enter checkout last name",
+          "pageOrStep": "checkout information form",
+          "locatorType": "testid",
+          "locatorValue": "lastname",
+          "assertionRole": "none",
+          "meaningful": true
+        },
+        {
+          "order": 24,
+          "type": "fill",
+          "intent": "enter checkout postal code",
+          "pageOrStep": "checkout information form",
+          "locatorType": "testid",
+          "locatorValue": "postalcode",
+          "assertionRole": "none",
+          "meaningful": true
+        },
+        {
+          "order": 25,
+          "type": "click",
+          "intent": "continue to checkout overview",
+          "pageOrStep": "checkout information form",
+          "locatorType": "testid",
+          "locatorValue": "continue",
+          "assertionRole": "none",
+          "meaningful": true
+        },
+        {
+          "order": 26,
+          "type": "assertion",
+          "intent": "confirm the checkout overview page is ready",
+          "pageOrStep": "checkout overview page",
+          "locatorType": "testid",
+          "locatorValue": "title",
+          "assertionRole": "readiness",
+          "meaningful": true
+        },
+        {
+          "order": 27,
+          "type": "assertion",
+          "intent": "confirm the selected product remains present in checkout overview",
+          "pageOrStep": "checkout overview items",
+          "locatorType": "testid",
+          "locatorValue": "inventory item name",
+          "assertionRole": "intermediate",
+          "meaningful": true
+        },
+        {
+          "order": 28,
+          "type": "assertion",
+          "intent": "confirm the selected product price remains present in checkout overview",
+          "pageOrStep": "checkout overview items",
+          "locatorType": "testid",
+          "locatorValue": "inventory item price",
+          "assertionRole": "intermediate",
+          "meaningful": true
+        },
+        {
+          "order": 29,
+          "type": "click",
+          "intent": "finish the order",
+          "pageOrStep": "checkout overview page",
+          "locatorType": "testid",
+          "locatorValue": "finish",
+          "assertionRole": "none",
+          "meaningful": true
+        },
+        {
+          "order": 30,
+          "type": "assertion",
+          "intent": "confirm the order completion page is ready",
+          "pageOrStep": "checkout complete page",
+          "locatorType": "testid",
+          "locatorValue": "title",
+          "assertionRole": "readiness",
+          "meaningful": true
+        },
+        {
+          "order": 31,
+          "type": "assertion",
+          "intent": "confirm the order completion message is visible",
+          "pageOrStep": "checkout complete page",
+          "locatorType": "testid",
+          "locatorValue": "complete header",
+          "assertionRole": "success",
+          "meaningful": true
+        }
+      ],
+      "signature": [
+        {
+          "type": "click",
+          "intent": "start checkout",
+          "pageOrStep": "cart page",
+          "locatorType": "testid",
+          "locatorValue": "checkout",
+          "assertionRole": "none"
+        },
+        {
+          "type": "assertion",
+          "intent": "confirm the checkout information page is ready",
+          "pageOrStep": "checkout information page",
+          "locatorType": "testid",
+          "locatorValue": "title",
+          "assertionRole": "readiness"
+        },
+        {
+          "type": "fill",
+          "intent": "enter checkout first name",
+          "pageOrStep": "checkout information form",
+          "locatorType": "testid",
+          "locatorValue": "firstname",
+          "assertionRole": "none"
+        },
+        {
+          "type": "fill",
+          "intent": "enter checkout last name",
+          "pageOrStep": "checkout information form",
+          "locatorType": "testid",
+          "locatorValue": "lastname",
+          "assertionRole": "none"
+        },
+        {
+          "type": "fill",
+          "intent": "enter checkout postal code",
+          "pageOrStep": "checkout information form",
+          "locatorType": "testid",
+          "locatorValue": "postalcode",
+          "assertionRole": "none"
+        },
+        {
+          "type": "click",
+          "intent": "continue to checkout overview",
+          "pageOrStep": "checkout information form",
+          "locatorType": "testid",
+          "locatorValue": "continue",
+          "assertionRole": "none"
+        },
+        {
+          "type": "assertion",
+          "intent": "confirm the checkout overview page is ready",
+          "pageOrStep": "checkout overview page",
+          "locatorType": "testid",
+          "locatorValue": "title",
+          "assertionRole": "readiness"
+        },
+        {
+          "type": "assertion",
+          "intent": "confirm the selected product remains present in checkout overview",
+          "pageOrStep": "checkout overview items",
+          "locatorType": "testid",
+          "locatorValue": "inventory item name",
+          "assertionRole": "intermediate"
+        },
+        {
+          "type": "assertion",
+          "intent": "confirm the selected product price remains present in checkout overview",
+          "pageOrStep": "checkout overview items",
+          "locatorType": "testid",
+          "locatorValue": "inventory item price",
+          "assertionRole": "intermediate"
+        },
+        {
+          "type": "click",
+          "intent": "finish the order",
+          "pageOrStep": "checkout overview page",
+          "locatorType": "testid",
+          "locatorValue": "finish",
+          "assertionRole": "none"
+        },
+        {
+          "type": "assertion",
+          "intent": "confirm the order completion page is ready",
+          "pageOrStep": "checkout complete page",
+          "locatorType": "testid",
+          "locatorValue": "title",
+          "assertionRole": "readiness"
+        },
+        {
+          "type": "assertion",
+          "intent": "confirm the order completion message is visible",
+          "pageOrStep": "checkout complete page",
+          "locatorType": "testid",
+          "locatorValue": "complete header",
+          "assertionRole": "success"
+        }
+      ],
+      "signatureHash": "d4982e67a1d26fea21545db387a4a84da66a0455c969a9b584d8c76c9c13713e",
+      "entryState": "cart page: start checkout",
+      "exitState": "checkout complete page: confirm the order completion message is visible",
+      "createdAt": "2026-06-21T03:58:58.455Z",
+      "updatedAt": "2026-06-21T16:17:35.809Z"
+    },
+    {
+      "id": "90ef0faf-5067-4814-ad99-cd93df42a2fa",
+      "workflowName": "SampleLoginWorkflow",
+      "artifactPath": "_automation/workflows/sampleLoginWorkflow.ts",
+      "sanitizedRawCode": "test.describe('Regression', () => {\n  test('Add to cart', async ({ page }) => {\n    await page.goto('https://www.saucedemo.com/');\n    await expect(page.locator('#root')).toContainText('Swag Labs');\n    await page.locator('[data-test=\"username\"]').click();\n    await page.locator('[data-test=\"username\"]').fill('<redacted>');\n    await page.locator('[data-test=\"password\"]').click();\n    await page.locator('[data-test=\"password\"]').fill('<redacted>');\n    await page.locator('[data-test=\"login-button\"]').click();\n    await expect(page.locator('[data-test=\"title\"]')).toContainText('Products');\n    await expect(page.locator('[data-test=\"item-4-title-link\"] [data-test=\"inventory-item-name\"]')).toContainText('Sauce Labs Backpack');\n    await expect(page.locator('[data-test=\"inventory-list\"]')).toContainText('$29.99');\n    await page.locator('[data-test=\"add-to-cart-sauce-labs-backpack\"]').click();\n    await page.locator('[data-test=\"shopping-cart-link\"]').click();\n    await expect(page.locator('[data-test=\"title\"]')).toContainText('Your Cart');\n    await expect(page.locator('[data-test=\"inventory-item-name\"]')).toContainText('Sauce Labs Backpack');\n    await expect(page.locator('[data-test=\"inventory-item-price\"]')).toContainText('$29.99');\n  });\n});",
+      "operations": [
+        {
+          "order": 1,
+          "type": "goto",
+          "intent": "open the login page",
+          "pageOrStep": "login page",
+          "locatorType": "unknown",
+          "locatorValue": "",
+          "assertionRole": "none",
+          "meaningful": true
+        },
+        {
+          "order": 2,
+          "type": "assertion",
+          "intent": "confirm login page identity and readiness",
+          "pageOrStep": "login page",
+          "locatorType": "css",
+          "locatorValue": "root",
+          "assertionRole": "readiness",
+          "meaningful": true
+        },
+        {
+          "order": 4,
+          "type": "fill",
+          "intent": "enter the username",
+          "pageOrStep": "login page",
+          "locatorType": "testid",
+          "locatorValue": "username",
+          "assertionRole": "none",
+          "meaningful": true
+        },
+        {
+          "order": 6,
+          "type": "fill",
+          "intent": "enter the password",
+          "pageOrStep": "login page",
+          "locatorType": "testid",
+          "locatorValue": "password",
+          "assertionRole": "none",
+          "meaningful": true
+        },
+        {
+          "order": 7,
+          "type": "click",
+          "intent": "submit login",
+          "pageOrStep": "login page",
+          "locatorType": "testid",
+          "locatorValue": "login button",
+          "assertionRole": "none",
+          "meaningful": true
+        },
+        {
+          "order": 8,
+          "type": "assertion",
+          "intent": "confirm inventory page identity before product interaction",
+          "pageOrStep": "inventory page",
+          "locatorType": "testid",
+          "locatorValue": "title",
+          "assertionRole": "readiness",
+          "meaningful": true
+        }
+      ],
+      "signature": [
+        {
+          "type": "goto",
+          "intent": "open the login page",
+          "pageOrStep": "login page",
+          "locatorType": "unknown",
+          "locatorValue": "",
+          "assertionRole": "none"
+        },
+        {
+          "type": "assertion",
+          "intent": "confirm login page identity and readiness",
+          "pageOrStep": "login page",
+          "locatorType": "css",
+          "locatorValue": "root",
+          "assertionRole": "readiness"
+        },
+        {
+          "type": "fill",
+          "intent": "enter the username",
+          "pageOrStep": "login page",
+          "locatorType": "testid",
+          "locatorValue": "username",
+          "assertionRole": "none"
+        },
+        {
+          "type": "fill",
+          "intent": "enter the password",
+          "pageOrStep": "login page",
+          "locatorType": "testid",
+          "locatorValue": "password",
+          "assertionRole": "none"
+        },
+        {
+          "type": "click",
+          "intent": "submit login",
+          "pageOrStep": "login page",
+          "locatorType": "testid",
+          "locatorValue": "login button",
+          "assertionRole": "none"
+        },
+        {
+          "type": "assertion",
+          "intent": "confirm inventory page identity before product interaction",
+          "pageOrStep": "inventory page",
+          "locatorType": "testid",
+          "locatorValue": "title",
+          "assertionRole": "readiness"
+        }
+      ],
+      "signatureHash": "6fde262ed192dcefd8261c4fa36f6d66c9668905eede4151568273ecda787ac1",
+      "entryState": "login page: open the login page",
+      "exitState": "inventory page: confirm inventory page identity before product interaction",
+      "createdAt": "2026-06-21T03:20:15.360Z",
+      "updatedAt": "2026-06-21T22:18:28.744Z"
+    }
+  ]
+}

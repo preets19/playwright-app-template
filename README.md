@@ -98,12 +98,6 @@ For CI or environment-specific settings, set:
 APP_SETTINGS_PATH=path\to\appsettings.enterprise.json
 ```
 
-## Sample App
-
-The template includes one canonical `sampleCheckout` UI flow against the Practice Software Testing Toolshop demo app. Use it as the reference for framework-compatible structure: models, test data, page objects, workflows, readiness waits, interaction helpers, and specs.
-
-When this template becomes a real app repo, keep the sample only as long as it helps onboarding. New AI-generated tests should use the sample for style, then reuse and extend real app artifacts as they are added.
-
 ## Update Framework
 
 Use Dashboard Home in `playwright-automation-dashboard` and click:

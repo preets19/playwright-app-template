@@ -31,10 +31,10 @@ tests
 
 Models define the shape of data used by automation.
 
-Example: `models/sampleCheckoutModel.ts` defines what checkout test data must contain:
+Illustrative model shape:
 
 ```ts
-export interface SampleGuestModel {
+export interface GuestModel {
   email: string;
   firstName: string;
   lastName: string;
@@ -47,10 +47,10 @@ Use models when the same kind of data is passed through pages, workflows, or tes
 
 Test data contains the actual values used by tests.
 
-Example: `test-data/sampleCheckoutData.ts` defines reusable checkout data:
+Illustrative test-data shape:
 
 ```ts
-export const sampleGuestCheckout: SampleGuestCheckoutModel = {
+export const guestCheckout: GuestCheckoutModel = {
   // product, guest, billing address, payment, and expected result
 };
 ```
@@ -61,7 +61,7 @@ Use test data for users, accounts, product IDs, API payload examples, expected l
 
 Pages represent app screens or major UI areas.
 
-Example: `pages/sampleCheckoutPage.ts` knows how to interact with the checkout page:
+Illustrative page-object behavior:
 
 ```ts
 await this.actions.selectByValue(this.countrySelect, address.country);
@@ -75,10 +75,10 @@ Use page classes for locators and screen-level actions. If a button selector cha
 
 Workflows combine page actions into business-level journeys.
 
-Example: `workflows/sampleCheckoutWorkflow.ts` combines pages into a guest checkout journey:
+Illustrative workflow composition:
 
 ```ts
-const homePage = new SampleHomePage(this.page);
+const homePage = new HomePage(this.page);
 await homePage.open();
 const rentalsPage = await homePage.openRentals();
 ```
@@ -89,13 +89,13 @@ Use workflows when a test needs to express a business action such as logging in,
 
 Tests are the executable specifications.
 
-Example: `tests/ui/sampleCheckout.spec.ts` verifies a sample checkout outcome:
+Illustrative test composition:
 
 ```ts
-const checkout = await new SampleCheckoutWorkflow(page)
-  .checkoutRentalProductAsGuest(sampleGuestCheckout);
+const checkout = await new CheckoutWorkflow(page)
+  .checkoutProductAsGuest(guestCheckout);
 
-await expect(checkout.paymentSuccessMessage).toContain(sampleGuestCheckout.expectedSuccessMessage);
+await expect(checkout.paymentSuccessMessage).toContain(guestCheckout.expectedSuccessMessage);
 ```
 
 Tests should focus on what behavior is being verified. They should use pages, workflows, and test data instead of repeating low-level UI steps.
