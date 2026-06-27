@@ -14,7 +14,7 @@
     "validate": "npm run typecheck && npm test"
   },
   "devDependencies": {
-    "@playwright/test": "^1.60.0",
+    "@playwright/test": "^1.61.1",
     "@types/node": "22.7.5",
     "@your-org/playwright-base-framework": "file:../playwright-base-framework/your-org-playwright-base-framework-1.0.0.tgz",
     "typescript": "^5.9.3"

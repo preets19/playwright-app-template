@@ -1,68 +1,30 @@
 import { BasePage } from '@your-org/playwright-base-framework';
 
 export class ScheduleFixturesPage extends BasePage {
-  override async waitUntilReady(): Promise<void> {
-    const teamsFilterSection = await this.resolveLocator([
-      () => this.page.locator('#tippy-3').getByRole('link', { name: "Women's T20 World Cup" }).locator('div').filter({ hasText: /^Teams$/ }).nth(2),
-      () => this.page.locator('div').filter({ hasText: /^Teams$/ }).nth(2)
-      // Manual override: if every automatic candidate above ever fails, add a new first entry here with a manually-confirmed locator (e.g. a full XPath verified by inspecting the live page). This is an expected maintenance path, not an error state.
-    ]);
-    await this.waits.forVisible(teamsFilterSection);
-  }
+  private readonly scheduleHeading = this.page.locator('h1');
+  private readonly mainResultsContainer = this.page.locator('#main-container');
+  private readonly seriesNavigationLandmark = this.page.getByRole('navigation');
+  private readonly standingsTableNavLink = this.page.getByRole('navigation').getByRole('link', { name: 'Table' });
 
-  async openTeamFilterPopover(): Promise<void> {
-    const expandTeamFilterIcon = await this.resolveLocator([
-      () => this.page.locator('div').filter({ hasText: /^Teams$/ }).nth(2).locator('.icon-expand_more-outlined.ds-text-icon-inverse').first(),
-      () => this.page.locator('.icon-expand_more-outlined.ds-text-icon-inverse').first()
-      // Manual override: if every automatic candidate above ever fails, add a new first entry here with a manually-confirmed locator (e.g. a full XPath verified by inspecting the live page). This is an expected maintenance path, not an error state.
-    ]);
-    await this.actions.click(expandTeamFilterIcon);
-  }
-
-  async searchTeam(teamSearchTerm: string): Promise<void> {
-    const teamSearchInput = await this.resolveLocator([
-      () => this.page.locator('div').filter({ hasText: /^Teams$/ }).nth(2).getByRole('textbox', { name: 'search...' }),
-      () => this.page.getByRole('textbox', { name: 'search...' })
-      // Manual override: if every automatic candidate above ever fails, add a new first entry here with a manually-confirmed locator (e.g. a full XPath verified by inspecting the live page). This is an expected maintenance path, not an error state.
-    ]);
-    await this.actions.fill(teamSearchInput, teamSearchTerm);
-  }
-
-  async selectTeam(teamName: string): Promise<void> {
-    const selectedTeamOption = await this.resolveLocator([
-      () => this.page.locator('#tippy-76').getByText(teamName),
-      () => this.page.locator('[id^="tippy-"]').getByText(teamName),
-      () => this.page.locator('div').filter({ hasText: /^Teams$/ }).nth(2).getByText(teamName),
-      () => this.page.getByText(teamName)
-      // Manual override: if every automatic candidate above ever fails, add a new first entry here with a manually-confirmed locator (e.g. a full XPath verified by inspecting the live page). This is an expected maintenance path, not an error state.
-    ]);
-    await this.actions.click(selectedTeamOption);
-  }
-
-  async applyFilter(): Promise<void> {
-    const applyButton = await this.resolveLocator([
-      () => this.page.locator('div').filter({ hasText: /^Teams$/ }).nth(2).getByRole('button', { name: 'Apply' }),
-      () => this.page.getByRole('button', { name: 'Apply' })
-      // Manual override: if every automatic candidate above ever fails, add a new first entry here with a manually-confirmed locator (e.g. a full XPath verified by inspecting the live page). This is an expected maintenance path, not an error state.
-    ]);
-    await this.actions.click(applyButton);
+  // Readiness gap: Tier 3 corroboration only; immediate assertion was generic, not page-level (Prompt 1).
+  async waitUntilHeadingVisible(expectedHeading: string): Promise<void> {
+    await this.waits.forText(this.scheduleHeading, expectedHeading);
   }
 
   async getScheduleHeadingText(): Promise<string> {
-    const scheduleHeading = await this.resolveLocator([
-      () => this.page.locator('div').filter({ hasText: /^Teams$/ }).nth(2).locator('h1'),
-      () => this.page.locator('h1')
-      // Manual override: if every automatic candidate above ever fails, add a new first entry here with a manually-confirmed locator (e.g. a full XPath verified by inspecting the live page). This is an expected maintenance path, not an error state.
-    ]);
-    return this.actions.text(scheduleHeading);
+    return this.actions.text(this.scheduleHeading);
   }
 
-  async getFilteredResultsText(): Promise<string> {
-    const filteredResultsContainer = await this.resolveLocator([
-      () => this.page.locator('div').filter({ hasText: /^Teams$/ }).nth(2).locator('#main-container'),
-      () => this.page.locator('#main-container')
-      // Manual override: if every automatic candidate above ever fails, add a new first entry here with a manually-confirmed locator (e.g. a full XPath verified by inspecting the live page). This is an expected maintenance path, not an error state.
-    ]);
-    return this.actions.text(filteredResultsContainer);
+  async getMainResultsText(): Promise<string> {
+    return this.actions.text(this.mainResultsContainer);
+  }
+
+  // Readiness gap: reused via workflow source read, not locator match; readinessGap expected (Phase A.6).
+  async confirmSeriesNavigation(expectedSeriesNavigationText: string): Promise<void> {
+    await this.waits.forText(this.seriesNavigationLandmark, expectedSeriesNavigationText);
+  }
+
+  async openStandingsTable(): Promise<void> {
+    await this.actions.click(this.standingsTableNavLink);
   }
 }

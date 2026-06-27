@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-06-23T03:29:38.082Z",
+  "updatedAt": "2026-06-24T17:30:59.183Z",
   "workflows": [
     {
       "id": "f43db90e-955e-401a-bd98-5f3a2f471d23",
@@ -132,9 +132,29 @@
       "sanitizedRawCode": "test.describe('Regression', () => {\n  test('Filter by Series and Team', async ({ page }) => {\n    await page.goto('https://www.cricinfo.com/');\n    await expect(page.getByRole('navigation')).toContainText('Series');\n    await page.getByRole('link', { name: 'Series' }).click();\n    await expect(page.locator('#tippy-3'). ).getByRole('link', { name: 'Women\\'s T20 World Cup' }).toBeVisible();\n    await page.locator('#tippy-3').getByRole('link', { name: 'Women\\'s T20 World Cup' }).click();\n    await expect(page.locator('h1')).toContainText('ICC Women\\'s T20 World Cup 2026');\n    await page.getByRole('link', { name: 'Fixtures and Results' }).click();\n    await expect(page.locator('div').filter({ hasText: /^Teams$/ }).nth(2)).toBeVisible();\n    await page.locator('.icon-expand_more-outlined.ds-text-icon-inverse').first().click();\n    await page.getByRole('textbox', { name: 'search...' }).click();\n    await page.getByRole('textbox', { name: 'search...' }).fill('<redacted>');\n    await page.locator('#tippy-76').getByText('India Women').click();\n    await page.getByRole('button', { name: 'Apply' }).click();\n    await expect(page.locator('h1')).toContainText('ICC Women\\'s T20 World Cup Schedule & Match Results');\n    await expect(page.locator('#main-container')).toContainText('India Women');\n  });\n});",
       "operations": [
         {
+          "order": 3,
+          "type": "click",
+          "intent": "open series nav menu",
+          "pageOrStep": "",
+          "locatorType": "role",
+          "locatorValue": "series",
+          "assertionRole": "none",
+          "meaningful": true
+        },
+        {
+          "order": 4,
+          "type": "assertion",
+          "intent": "protect upcoming series link click",
+          "pageOrStep": "",
+          "locatorType": "role",
+          "locatorValue": "women s t20 world cup",
+          "assertionRole": "readiness",
+          "meaningful": true
+        },
+        {
           "order": 5,
           "type": "click",
-          "intent": "select the women s t20 world cup series from the open popover",
+          "intent": "navigate to women s t20 wc series page",
           "pageOrStep": "",
           "locatorType": "role",
           "locatorValue": "women s t20 world cup",
@@ -144,17 +164,17 @@
         {
           "order": 6,
           "type": "assertion",
-          "intent": "confirm the series detail page heading identifies the selected series",
+          "intent": "confirm series page transition destination",
           "pageOrStep": "",
           "locatorType": "css",
           "locatorValue": "h1",
-          "assertionRole": "intermediate",
+          "assertionRole": "readiness",
           "meaningful": true
         },
         {
           "order": 7,
           "type": "click",
-          "intent": "navigate to the fixtures and results page for the series",
+          "intent": "open fixtures and results tab",
           "pageOrStep": "",
           "locatorType": "role",
           "locatorValue": "fixtures and results",
@@ -164,27 +184,27 @@
         {
           "order": 8,
           "type": "assertion",
-          "intent": "confirm the teams filter section is visible before interacting with its controls",
+          "intent": "protect upcoming filter expand search steps",
           "pageOrStep": "",
           "locatorType": "css",
-          "locatorValue": "teams",
+          "locatorValue": "div filter teams nth #",
           "assertionRole": "readiness",
           "meaningful": true
         },
         {
           "order": 9,
           "type": "click",
-          "intent": "open the team search filter popover",
+          "intent": "expand team filter dropdown",
           "pageOrStep": "",
           "locatorType": "css",
-          "locatorValue": "",
+          "locatorValue": "icon expand more outlined ds text icon inverse",
           "assertionRole": "none",
           "meaningful": true
         },
         {
           "order": 11,
           "type": "fill",
-          "intent": "search for the team by name within the filter popover",
+          "intent": "enter team search term",
           "pageOrStep": "",
           "locatorType": "role",
           "locatorValue": "search",
@@ -194,7 +214,7 @@
         {
           "order": 12,
           "type": "click",
-          "intent": "select the india women team option from the search results popover",
+          "intent": "select india women from search results",
           "pageOrStep": "",
           "locatorType": "text",
           "locatorValue": "india women",
@@ -204,7 +224,7 @@
         {
           "order": 13,
           "type": "click",
-          "intent": "apply the selected series and team filter",
+          "intent": "apply team filter selection",
           "pageOrStep": "",
           "locatorType": "role",
           "locatorValue": "apply",
@@ -214,7 +234,7 @@
         {
           "order": 14,
           "type": "assertion",
-          "intent": "confirm the schedule page heading reflects the selected series",
+          "intent": "terminal assertion inferred as success",
           "pageOrStep": "",
           "locatorType": "css",
           "locatorValue": "h1",
@@ -224,7 +244,7 @@
         {
           "order": 15,
           "type": "assertion",
-          "intent": "confirm the filtered results reflect the selected team",
+          "intent": "terminal assertion inferred as success",
           "pageOrStep": "",
           "locatorType": "css",
           "locatorValue": "main container",
@@ -235,7 +255,23 @@
       "signature": [
         {
           "type": "click",
-          "intent": "select the women s t20 world cup series from the open popover",
+          "intent": "open series nav menu",
+          "pageOrStep": "",
+          "locatorType": "role",
+          "locatorValue": "series",
+          "assertionRole": "none"
+        },
+        {
+          "type": "assertion",
+          "intent": "protect upcoming series link click",
+          "pageOrStep": "",
+          "locatorType": "role",
+          "locatorValue": "women s t20 world cup",
+          "assertionRole": "readiness"
+        },
+        {
+          "type": "click",
+          "intent": "navigate to women s t20 wc series page",
           "pageOrStep": "",
           "locatorType": "role",
           "locatorValue": "women s t20 world cup",
@@ -243,15 +279,15 @@
         },
         {
           "type": "assertion",
-          "intent": "confirm the series detail page heading identifies the selected series",
+          "intent": "confirm series page transition destination",
           "pageOrStep": "",
           "locatorType": "css",
           "locatorValue": "h1",
-          "assertionRole": "intermediate"
+          "assertionRole": "readiness"
         },
         {
           "type": "click",
-          "intent": "navigate to the fixtures and results page for the series",
+          "intent": "open fixtures and results tab",
           "pageOrStep": "",
           "locatorType": "role",
           "locatorValue": "fixtures and results",
@@ -259,23 +295,23 @@
         },
         {
           "type": "assertion",
-          "intent": "confirm the teams filter section is visible before interacting with its controls",
+          "intent": "protect upcoming filter expand search steps",
           "pageOrStep": "",
           "locatorType": "css",
-          "locatorValue": "teams",
+          "locatorValue": "div filter teams nth #",
           "assertionRole": "readiness"
         },
         {
           "type": "click",
-          "intent": "open the team search filter popover",
+          "intent": "expand team filter dropdown",
           "pageOrStep": "",
           "locatorType": "css",
-          "locatorValue": "",
+          "locatorValue": "icon expand more outlined ds text icon inverse",
           "assertionRole": "none"
         },
         {
           "type": "fill",
-          "intent": "search for the team by name within the filter popover",
+          "intent": "enter team search term",
           "pageOrStep": "",
           "locatorType": "role",
           "locatorValue": "search",
@@ -283,7 +319,7 @@
         },
         {
           "type": "click",
-          "intent": "select the india women team option from the search results popover",
+          "intent": "select india women from search results",
           "pageOrStep": "",
           "locatorType": "text",
           "locatorValue": "india women",
@@ -291,7 +327,7 @@
         },
         {
           "type": "click",
-          "intent": "apply the selected series and team filter",
+          "intent": "apply team filter selection",
           "pageOrStep": "",
           "locatorType": "role",
           "locatorValue": "apply",
@@ -299,7 +335,7 @@
         },
         {
           "type": "assertion",
-          "intent": "confirm the schedule page heading reflects the selected series",
+          "intent": "terminal assertion inferred as success",
           "pageOrStep": "",
           "locatorType": "css",
           "locatorValue": "h1",
@@ -307,18 +343,18 @@
         },
         {
           "type": "assertion",
-          "intent": "confirm the filtered results reflect the selected team",
+          "intent": "terminal assertion inferred as success",
           "pageOrStep": "",
           "locatorType": "css",
           "locatorValue": "main container",
           "assertionRole": "success"
         }
       ],
-      "signatureHash": "c4495e9f819277b599f4d59fda2b93c7ee101c9277c2d3d66203a71552e0c6a0",
-      "entryState": "select the women s t20 world cup series from the open popover",
-      "exitState": "confirm the filtered results reflect the selected team",
+      "signatureHash": "71893701905886929b0698d5db8b7eb9cf3e702b95debc11cceb2d781a0e6dac",
+      "entryState": "open series nav menu",
+      "exitState": "terminal assertion inferred as success",
       "createdAt": "2026-06-23T03:29:38.082Z",
-      "updatedAt": "2026-06-23T03:29:38.082Z"
+      "updatedAt": "2026-06-24T17:30:59.183Z"
     },
     {
       "id": "9aaa9507-a6b6-461d-afb1-f0770e44d8aa",

@@ -1,39 +1,39 @@
-import type { Page } from '@playwright/test';
-import type { SeriesTeamFilterCriteriaModel } from '../models/seriesTeamFilterCriteriaModel.js';
 import { CricinfoHomePage } from '../pages/cricinfoHomePage.js';
 import { SeriesDetailPage } from '../pages/seriesDetailPage.js';
 import { ScheduleFixturesPage } from '../pages/scheduleFixturesPage.js';
 
-export interface FilterSeriesAndTeamWorkflowResult {
-  schedulePageHeading: string;
-  filteredResultsText: string;
+export interface FilterSeriesAndTeamResult {
+  scheduleHeadingText: string;
+  mainResultsText: string;
 }
 
 export class FilterSeriesAndTeamWorkflow {
-  constructor(private readonly page: Page) {}
+  constructor(
+    private readonly cricinfoHomePage: CricinfoHomePage,
+    private readonly seriesDetailPage: SeriesDetailPage,
+    private readonly scheduleFixturesPage: ScheduleFixturesPage
+  ) {}
 
   async filterBySeriesAndTeam(
-    criteria: SeriesTeamFilterCriteriaModel
-  ): Promise<FilterSeriesAndTeamWorkflowResult> {
-    const cricinfoHomePage = new CricinfoHomePage(this.page);
-    await cricinfoHomePage.selectSeries(criteria.seriesName);
+    seriesName: string,
+    expectedSeriesPageHeading: string,
+    teamSearchTerm: string,
+    teamName: string,
+    expectedSchedulePageHeading: string
+  ): Promise<FilterSeriesAndTeamResult> {
+    await this.cricinfoHomePage.openSeriesMenu();
+    await this.cricinfoHomePage.selectSeries(seriesName);
+    await this.seriesDetailPage.waitUntilHeadingVisible(expectedSeriesPageHeading);
+    await this.seriesDetailPage.openFixturesAndResults();
+    await this.seriesDetailPage.expandTeamsFilter();
+    await this.seriesDetailPage.searchTeam(teamSearchTerm);
+    await this.seriesDetailPage.selectTeam(teamName);
+    await this.seriesDetailPage.applyFilters();
+    await this.scheduleFixturesPage.waitUntilHeadingVisible(expectedSchedulePageHeading);
 
-    const seriesDetailPage = new SeriesDetailPage(this.page);
-    await seriesDetailPage.waitUntilReady();
-    await seriesDetailPage.openFixturesAndResults();
+    const scheduleHeadingText = await this.scheduleFixturesPage.getScheduleHeadingText();
+    const mainResultsText = await this.scheduleFixturesPage.getMainResultsText();
 
-    const scheduleFixturesPage = new ScheduleFixturesPage(this.page);
-    await scheduleFixturesPage.waitUntilReady();
-    await scheduleFixturesPage.openTeamFilterPopover();
-    await scheduleFixturesPage.searchTeam(criteria.teamSearchTerm);
-    await scheduleFixturesPage.selectTeam(criteria.teamName);
-    await scheduleFixturesPage.applyFilter();
-    const schedulePageHeadingResult = await scheduleFixturesPage.getScheduleHeadingText();
-    const filteredResultsTextResult = await scheduleFixturesPage.getFilteredResultsText();
-
-    return {
-      schedulePageHeading: schedulePageHeadingResult,
-      filteredResultsText: filteredResultsTextResult
-    };
+    return { scheduleHeadingText, mainResultsText };
   }
 }
